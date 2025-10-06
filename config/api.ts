@@ -8,7 +8,7 @@ const getBaseUrl = () => {
     // For iOS Simulator, use localhost
     // For physical devices, use your computer's IP address
     if (Platform.OS === 'android') {
-      return 'http://172.31.16.1:8000'; // Android Emulator
+      return 'https://green-step-backend.vercel.app'; // Android Emulator
       // return 'http://192.168.1.X:8000'; // Replace X with your computer's IP for physical device
     }
     return 'http://localhost:8000'; // iOS Simulator
