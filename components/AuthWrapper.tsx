@@ -1,43 +1,42 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
-import AuthScreen from './AuthScreen';
 
-interface AuthWrapperProps {
-  children: React.ReactNode;
-}
+const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
 
-const AuthWrapper: React.FC<AuthWrapperProps> = ({ children }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+  useEffect(() => {
+    if (!isLoading) {
+      if (!user) {
+        router.replace('/auth/login');
+      }
+    }
+  }, [user, isLoading]);
 
-  // Skip authentication for development - go directly to dashboard
-  return <>{children}</>;
-
-  // Original authentication logic (commented out for development)
-  /*
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#16a34a" />
+        <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
   }
 
-  if (!isAuthenticated) {
-    return <AuthScreen />;
+  if (!user) {
+    // Prevents rendering protected tabs while redirecting
+    return null;
   }
 
   return <>{children}</>;
-  */
 };
+
+export default AuthWrapper;
 
 const styles = StyleSheet.create({
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
   },
 });
-
-export default AuthWrapper;

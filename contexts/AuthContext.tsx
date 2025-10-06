@@ -7,10 +7,12 @@ interface User {
   role: string;
 }
 
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  restoreSession: () => Promise<void>;
   login: (username: string, password: string) => Promise<boolean>;
   register: (userData: {
     username: string;
@@ -100,6 +102,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Restore session function (stub for now)
+  const restoreSession = async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      // You can implement session restoration logic here, e.g., check localStorage or call an API
+      // For now, just set loading to false
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check authentication status on app startup
   useEffect(() => {
     // Skip auth check for now since checkAuth endpoint doesn't exist
@@ -110,6 +123,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     isAuthenticated: user !== null,
     isLoading,
+    restoreSession,
     login,
     register,
     logout,
