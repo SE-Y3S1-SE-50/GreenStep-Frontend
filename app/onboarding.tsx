@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
   slide: {
     width: width,
-    height: height - 200,
+    height: height - 150,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
@@ -190,6 +190,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 160,
   },
   iconCircle: {
     width: 240,
@@ -202,7 +203,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: 40,
+    paddingTop: 50,
   },
   title: {
     fontSize: 32,
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 40,
-    paddingBottom: 40,
+    paddingBottom: 20,
   },
   dotsContainer: {
     flexDirection: 'row',
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   nextButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#009900',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,

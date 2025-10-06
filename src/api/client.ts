@@ -2,7 +2,7 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // API Configuration
-const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://green-step-backend.vercel.app/api';
 
 export const api = axios.create({
   baseURL: apiBaseUrl,

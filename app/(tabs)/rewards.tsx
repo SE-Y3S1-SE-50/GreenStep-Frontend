@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   ActivityIndicator
 } from 'react-native';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { colors } from '../../src/theme/colors';
 import { getUserProfile, getUserAchievements } from '../../src/api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
+// Add proper TypeScript interfaces
 interface Badge {
   name: string;
   icon: string;
@@ -71,33 +72,42 @@ export default function RewardsScreen() {
   const router = useRouter();
   const { isAuthenticated, loading: authLoading } = useAuth();
 
+  // Add better error handling for the queries
   const { 
     data: profileData, 
     isLoading: profileLoading, 
     refetch: refetchProfile,
-    error: profileError 
+    error: profileError,
+    isError: isProfileError
   } = useQuery<UserProfile>({
     queryKey: ['userProfile'],
     queryFn: getUserProfile,
-    retry: 2,
-    enabled: isAuthenticated
+    retry: 1, // Reduce retries to fail faster
+    enabled: isAuthenticated && !authLoading,
   });
 
   const { 
     data: achievementsData, 
     isLoading: achievementsLoading,
     refetch: refetchAchievements,
-    error: achievementsError 
+    error: achievementsError,
+    isError: isAchievementsError
   } = useQuery({
     queryKey: ['userAchievements'],
     queryFn: getUserAchievements,
-    retry: 2,
-    enabled: isAuthenticated
+    retry: 1,
+    enabled: isAuthenticated && !authLoading,
   });
 
   // Redirect to login if not authenticated
+  React.useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/auth/login');
+    }
+  }, [authLoading, isAuthenticated, router]);
+
+  // Don't render anything if redirecting
   if (!authLoading && !isAuthenticated) {
-    router.replace('/auth/login');
     return null;
   }
 
@@ -111,6 +121,7 @@ export default function RewardsScreen() {
     setRefreshing(false);
   };
 
+  // Show loading state
   if (profileLoading || achievementsLoading || authLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -120,26 +131,65 @@ export default function RewardsScreen() {
     );
   }
 
-  if (profileError || !profileData?.success) {
+  // Show error state if API calls failed
+  if (isProfileError || isAchievementsError) {
+    console.log('Profile Error:', profileError);
+    console.log('Achievements Error:', achievementsError);
+    
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
-        <Text style={styles.errorText}>Failed to load rewards</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfile()}>
+        <Text style={styles.errorText}>
+          {profileError?.message || achievementsError?.message || 'Failed to load rewards'}
+        </Text>
+        <Text style={styles.errorSubtext}>
+          Please check your connection and try again
+        </Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={() => {
+            refetchProfile();
+            refetchAchievements();
+          }}
+        >
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  const profile = profileData.user;
-  const userBadges = profile.badges || [];
-  const userAchievements = profile.achievements || [];
+  // Add safe data access with fallbacks
+  const profile = profileData?.user || {
+    id: '',
+    username: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    stats: {
+      currentLevel: 1,
+      totalPoints: 0,
+      totalChallengesCompleted: 0,
+      totalChallengesJoined: 0,
+      pointsToNextLevel: 100
+    },
+    badges: [],
+    achievements: []
+  };
 
-  // Calculate progress percentage
-  const progressPercentage = profile.stats.pointsToNextLevel > 0 
-    ? Math.max(0, Math.min(100, ((100 - profile.stats.pointsToNextLevel) / 100) * 100))
-    : 0;
+  const userBadges = profile?.badges || [];
+  const userAchievements = profile?.achievements || [];
+  const stats = profile?.stats || {
+    currentLevel: 1,
+    totalPoints: 0,
+    totalChallengesCompleted: 0,
+    totalChallengesJoined: 0,
+    pointsToNextLevel: 100
+  };
+
+  // Calculate progress percentage with safe fallback
+  const progressPercentage = stats.pointsToNextLevel > 0 
+    ? Math.max(0, Math.min(100, ((stats.totalPoints || 0) / stats.pointsToNextLevel) * 100))
+    : 100;
 
   return (
     <ScrollView 
@@ -164,12 +214,12 @@ export default function RewardsScreen() {
         <View style={styles.statsGrid}>
           <StatPill 
             label="Level" 
-            value={profile.stats.currentLevel || 1} 
+            value={stats.currentLevel} 
             color={colors.primary}
           />
           <StatPill 
             label="Total Points" 
-            value={profile.stats.totalPoints || 0} 
+            value={stats.totalPoints} 
             color="#28a745"
           />
           <StatPill 
@@ -188,10 +238,10 @@ export default function RewardsScreen() {
         <View style={styles.levelProgress}>
           <View style={styles.levelProgressHeader}>
             <Text style={styles.levelText}>
-              Level {profile.stats.currentLevel || 1}
+              Level {stats.currentLevel}
             </Text>
             <Text style={styles.levelPointsText}>
-              {profile.stats.pointsToNextLevel || 0} points to next level
+              {Math.max(0, stats.pointsToNextLevel - stats.totalPoints)} points to next level
             </Text>
           </View>
           <View style={styles.progressBar}>
@@ -278,6 +328,8 @@ export default function RewardsScreen() {
   );
 }
 
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -305,6 +357,11 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: '#dc3545',
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    fontSize: 14,
+    color: '#6b7280',
     textAlign: 'center',
   },
   retryButton: {
