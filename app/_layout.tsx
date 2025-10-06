@@ -4,6 +4,17 @@ import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from '../contexts/AuthContext';
 import { DashboardProvider } from '../contexts/DashboardContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+// Create a query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
@@ -18,6 +29,7 @@ export default function RootLayout() {
   const checkOnboardingStatus = async () => {
     try {
       const completed = await AsyncStorage.getItem('onboarding_completed');
+      console.log('Onboarding status:', completed);
       setHasCompletedOnboarding(completed === 'true');
     } catch (error) {
       console.error('Error checking onboarding status:', error);
@@ -32,12 +44,24 @@ export default function RootLayout() {
 
     const inOnboarding = segments[0] === 'onboarding';
     const inAuth = segments[0] === 'auth';
+    const inTabs = segments[0] === '(tabs)';
 
+    console.log('Navigation check:', { 
+      hasCompletedOnboarding, 
+      inOnboarding, 
+      inAuth, 
+      inTabs,
+      segments 
+    });
+
+    // If user hasn't completed onboarding and not on onboarding page
     if (!hasCompletedOnboarding && !inOnboarding) {
-      // User hasn't completed onboarding, redirect to onboarding
+      console.log('Redirecting to onboarding...');
       router.replace('/onboarding');
-    } else if (hasCompletedOnboarding && inOnboarding) {
-      // User has completed onboarding but is on onboarding page, redirect to auth
+    }
+    // If user completed onboarding but is still on onboarding page
+    else if (hasCompletedOnboarding && inOnboarding) {
+      console.log('Redirecting to login...');
       router.replace('/auth/login');
     }
   }, [hasCompletedOnboarding, isLoading, segments]);
@@ -51,24 +75,25 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <DashboardProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Onboarding Flow */}
-          <Stack.Screen name="onboarding" />
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <DashboardProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* Onboarding Flow */}
+            <Stack.Screen name="onboarding" />
 
-          {/* Auth Flow (Login/Register) */}
-          <Stack.Screen name="auth" />
+            {/* Auth Flow (Login/Register) */}
+            <Stack.Screen name="auth" />
 
-          {/* Tabs Group (contains protected tabs) */}
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="challenge/[id]" options={{ title: 'Challenge' }} />
-          <Stack.Screen name="challenge/create" options={{ title: 'Create Challenge' }} />
-          <Stack.Screen name="recommendations" options={{ presentation: 'modal', title: 'Recommendations' }} />
-          
-        </Stack>
-      </DashboardProvider>
-    </AuthProvider>
+            {/* Tabs Group (contains protected tabs) */}
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="challenge/[id]" options={{ title: 'Challenge' }} />
+            <Stack.Screen name="challenge/create" options={{ title: 'Create Challenge' }} />
+            <Stack.Screen name="recommendations" options={{ presentation: 'modal', title: 'Recommendations' }} />
+          </Stack>
+        </DashboardProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

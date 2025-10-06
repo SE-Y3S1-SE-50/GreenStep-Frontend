@@ -1,6 +1,6 @@
 import { View, Text, FlatList, Pressable } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { getRecommendations, joinChallenge } from '../src/api/client';
+import getRecommendations, { joinChallenge } from '../src/api/client';
 import type { Challenge } from '../src/types/challenge';
 import ChallengeCard from '../src/components/ChallengeCard';
 

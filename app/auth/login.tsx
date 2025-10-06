@@ -18,7 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 
 export default function LoginScreen() {
-  const { login, isLoading } = useAuth();
+  const { login, loading } = useAuth();
   const router = useRouter();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -72,7 +72,7 @@ export default function LoginScreen() {
                   value={username}
                   onChangeText={setUsername}
                   autoCapitalize="none"
-                  editable={!isLoading}
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -87,7 +87,7 @@ export default function LoginScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                  editable={!isLoading}
+                  editable={!loading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
@@ -103,11 +103,11 @@ export default function LoginScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
               onPress={handleLogin}
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.loginButtonText}>Login</Text>
@@ -117,7 +117,7 @@ export default function LoginScreen() {
             <TouchableOpacity
               onPress={() => router.push('/auth/register')}
               style={styles.registerLink}
-              disabled={isLoading}
+              disabled={loading}
             >
               <Text style={styles.registerLinkText}>
                 Don't have an account? <Text style={styles.registerLinkBold}>Register</Text>

@@ -4,18 +4,18 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../contexts/AuthContext';
 
 const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading) {
+    if (!loading) {
       if (!user) {
         router.replace('/auth/login');
       }
     }
-  }, [user, isLoading]);
+  }, [user, loading]);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />

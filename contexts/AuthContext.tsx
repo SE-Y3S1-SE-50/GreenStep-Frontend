@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useSegments } from 'expo-router';
-import { API_CONFIG } from '../config/api';
+
+const API_URL = 'https://green-step-backend.vercel.app/api/auth';
 
 interface User {
   id: string;
@@ -15,7 +16,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
+  loading: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   register: (userData: {
     username: string;
@@ -44,7 +45,7 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
 
@@ -54,42 +55,61 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Protected route logic
   useEffect(() => {
-    if (isLoading) return;
+    if (loading) return;
 
     const inAuthGroup = segments[0] === 'auth';
     const inOnboarding = segments[0] === 'onboarding';
+    const inTabs = segments[0] === '(tabs)';
 
-    if (!user && !inAuthGroup && !inOnboarding) {
-      // User is not authenticated and not in auth or onboarding, redirect to login
-      router.replace('/auth/login');
-    } else if (user && inAuthGroup) {
-      // User is authenticated but on auth page, redirect to dashboard
+    console.log('Auth navigation check:', { 
+      user: !!user, 
+      inAuthGroup, 
+      inOnboarding,
+      inTabs,
+      segments 
+    });
+
+    // Only redirect if we're authenticated and not already in tabs
+    if (user && inAuthGroup) {
+      console.log('User authenticated, redirecting to dashboard');
       router.replace('/(tabs)/dashboard');
     }
-  }, [user, segments, isLoading]);
+    // Only redirect to login if not authenticated and not in auth/onboarding
+    else if (!user && !inAuthGroup && !inOnboarding && inTabs) {
+      console.log('User not authenticated, redirecting to login');
+      router.replace('/auth/login');
+    }
+  }, [user, segments, loading]);
 
   const restoreSession = async () => {
     try {
       const storedUser = await AsyncStorage.getItem('user');
-      if (storedUser) {
+      const storedToken = await AsyncStorage.getItem('auth_token');
+      
+      console.log('Restoring session:', { 
+        hasUser: !!storedUser, 
+        hasToken: !!storedToken 
+      });
+      
+      if (storedUser && storedToken) {
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
       console.error('Error restoring session:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
+    setLoading(true);
     try {
-      console.log('🔐 Attempting login to:', `${API_CONFIG.BASE_URL}/api/auth/login`);
+      console.log('🔐 Attempting login to:', API_URL + '/login');
       console.log('🔐 With credentials:', { username });
       
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/login`, {
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
-        headers: {
+        headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -107,15 +127,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Create user object from response
       const userData: User = {
         id: data.userId || 'temp-id',
-        username: username,
+        username: data.username || username,
         email: data.email || '',
         firstName: data.firstName || '',
         lastName: data.lastName || '',
         role: data.role || 'user',
       };
 
-      setUser(userData);
+      // Store user data and token
       await AsyncStorage.setItem('user', JSON.stringify(userData));
+      
+      // Store token if provided (for API calls)
+      if (data.token) {
+        await AsyncStorage.setItem('auth_token', data.token);
+      }
+
+      setUser(userData);
+      console.log('🔐 Login successful, user set');
 
       return true;
     } catch (error: any) {
@@ -123,7 +151,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('🔐 Error details:', error.message);
       return false;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -135,14 +163,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     email: string;
     phoneNumber: string;
   }): Promise<boolean> => {
-    setIsLoading(true);
+    setLoading(true);
     try {
-      console.log('📝 Attempting registration to:', `${API_CONFIG.BASE_URL}/api/auth/register`);
+      console.log('📝 Attempting registration to:', API_URL + '/register');
       console.log('📝 With data:', { ...userData, password: '***' });
       
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/register`, {
+      const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
-        headers: {
+        headers: { 
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -163,24 +191,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('📝 Error details:', error.message);
       return false;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const logout = async () => {
     try {
+      console.log('🚪 Logging out...');
+      
+      // Clear stored data
       await AsyncStorage.removeItem('user');
+      await AsyncStorage.removeItem('auth_token');
+      
+      // Clear user state
       setUser(null);
+      
+      console.log('🚪 Logout successful, redirecting to login');
+      
+      // Redirect to login
       router.replace('/auth/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('🚪 Logout error:', error);
     }
   };
 
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
-    isLoading,
+    loading,
     login,
     register,
     logout,

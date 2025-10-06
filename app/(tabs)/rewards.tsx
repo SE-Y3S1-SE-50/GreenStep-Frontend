@@ -5,15 +5,66 @@ import {
   ScrollView, 
   StyleSheet,
   RefreshControl,
-  TouchableOpacity
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
 import { useState } from 'react';
 import { colors } from '../../src/theme/colors';
 import { getUserProfile, getUserAchievements } from '../../src/api/client';
-import Badge from '../../src/components/Badge';
-import StatPill from '../../src/components/StatPill';
-import { useAuth } from '../../src/contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+interface Badge {
+  name: string;
+  icon: string;
+  description: string;
+  earnedAt?: string;
+}
+
+interface Achievement {
+  challengeTitle: string;
+  pointsEarned: number;
+  completedAt: string;
+}
+
+interface UserProfile {
+  success: boolean;
+  user: {
+    id: string;
+    username: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    stats: {
+      currentLevel: number;
+      totalPoints: number;
+      totalChallengesCompleted: number;
+      totalChallengesJoined: number;
+      pointsToNextLevel: number;
+    };
+    badges: Badge[];
+    achievements: Achievement[];
+  };
+}
+
+// Stat Pill Component
+function StatPill({ 
+  label, 
+  value, 
+  color 
+}: { 
+  label: string; 
+  value: string | number; 
+  color?: string;
+}) {
+  return (
+    <View style={[styles.statPill, color && { borderColor: color }]}>
+      <Text style={[styles.statValue, color && { color }]}>{value}</Text>
+      <Text style={[styles.statLabel, color && { color }]}>{label}</Text>
+    </View>
+  );
+}
 
 export default function RewardsScreen() {
   const [refreshing, setRefreshing] = useState(false);
@@ -21,28 +72,30 @@ export default function RewardsScreen() {
   const { isAuthenticated, loading: authLoading } = useAuth();
 
   const { 
-    data: profile, 
+    data: profileData, 
     isLoading: profileLoading, 
-    refetch: refetchProfile 
-  } = useQuery({
+    refetch: refetchProfile,
+    error: profileError 
+  } = useQuery<UserProfile>({
     queryKey: ['userProfile'],
     queryFn: getUserProfile,
-    retry: false,
+    retry: 2,
     enabled: isAuthenticated
   });
 
   const { 
-    data: achievements, 
+    data: achievementsData, 
     isLoading: achievementsLoading,
-    refetch: refetchAchievements 
+    refetch: refetchAchievements,
+    error: achievementsError 
   } = useQuery({
     queryKey: ['userAchievements'],
     queryFn: getUserAchievements,
-    retry: false,
+    retry: 2,
     enabled: isAuthenticated
   });
 
-  // Redirect to login if not authenticated - moved after all hooks
+  // Redirect to login if not authenticated
   if (!authLoading && !isAuthenticated) {
     router.replace('/auth/login');
     return null;
@@ -58,17 +111,19 @@ export default function RewardsScreen() {
     setRefreshing(false);
   };
 
-  if (profileLoading || achievementsLoading) {
+  if (profileLoading || achievementsLoading || authLoading) {
     return (
       <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading rewards...</Text>
       </View>
     );
   }
 
-  if (!profile) {
+  if (profileError || !profileData?.success) {
     return (
       <View style={styles.errorContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
         <Text style={styles.errorText}>Failed to load rewards</Text>
         <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfile()}>
           <Text style={styles.retryText}>Retry</Text>
@@ -77,14 +132,24 @@ export default function RewardsScreen() {
     );
   }
 
-  const userBadges = profile.user?.badges || [];
-  const userAchievements = profile.user?.achievements || [];
+  const profile = profileData.user;
+  const userBadges = profile.badges || [];
+  const userAchievements = profile.achievements || [];
+
+  // Calculate progress percentage
+  const progressPercentage = profile.stats.pointsToNextLevel > 0 
+    ? Math.max(0, Math.min(100, ((100 - profile.stats.pointsToNextLevel) / 100) * 100))
+    : 0;
 
   return (
     <ScrollView 
       style={styles.container}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+        />
       }
     >
       {/* Header */}
@@ -99,12 +164,12 @@ export default function RewardsScreen() {
         <View style={styles.statsGrid}>
           <StatPill 
             label="Level" 
-            value={profile?.user?.stats?.currentLevel || 1} 
+            value={profile.stats.currentLevel || 1} 
             color={colors.primary}
           />
           <StatPill 
             label="Total Points" 
-            value={profile?.user?.stats?.totalPoints || 0} 
+            value={profile.stats.totalPoints || 0} 
             color="#28a745"
           />
           <StatPill 
@@ -121,18 +186,19 @@ export default function RewardsScreen() {
         
         {/* Progress to next level */}
         <View style={styles.levelProgress}>
-          <Text style={styles.levelText}>
-            Level {profile?.user?.stats?.currentLevel || 1} • {profile?.user?.stats?.pointsToNextLevel || 0} points to next level
-          </Text>
+          <View style={styles.levelProgressHeader}>
+            <Text style={styles.levelText}>
+              Level {profile.stats.currentLevel || 1}
+            </Text>
+            <Text style={styles.levelPointsText}>
+              {profile.stats.pointsToNextLevel || 0} points to next level
+            </Text>
+          </View>
           <View style={styles.progressBar}>
             <View 
               style={[
                 styles.progressFill, 
-                { 
-                  width: `${Math.max(0, Math.min(100, 
-                    ((100 - (profile?.user?.stats?.pointsToNextLevel || 100)) / 100) * 100
-                  ))}%` 
-                }
+                { width: `${progressPercentage}%` }
               ]} 
             />
           </View>
@@ -143,15 +209,24 @@ export default function RewardsScreen() {
       <View style={styles.badgesSection}>
         <Text style={styles.sectionTitle}>Badges ({userBadges.length})</Text>
         {userBadges.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgesContainer}>
-            {userBadges.map((badge: any, index: number) => (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.badgesContainer}
+            contentContainerStyle={styles.badgesContent}
+          >
+            {userBadges.map((badge: Badge, index: number) => (
               <View key={index} style={styles.badgeCard}>
                 <Text style={styles.badgeIcon}>{badge.icon || '🏆'}</Text>
                 <Text style={styles.badgeName}>{badge.name}</Text>
-                <Text style={styles.badgeDescription}>{badge.description}</Text>
-                <Text style={styles.badgeDate}>
-                  {badge.earnedAt ? new Date(badge.earnedAt).toLocaleDateString() : 'Recently earned'}
+                <Text style={styles.badgeDescription} numberOfLines={2}>
+                  {badge.description}
                 </Text>
+                {badge.earnedAt && (
+                  <Text style={styles.badgeDate}>
+                    {new Date(badge.earnedAt).toLocaleDateString()}
+                  </Text>
+                )}
               </View>
             ))}
           </ScrollView>
@@ -169,14 +244,18 @@ export default function RewardsScreen() {
         <Text style={styles.sectionTitle}>Recent Achievements</Text>
         {userAchievements.length > 0 ? (
           <View style={styles.achievementsList}>
-            {userAchievements.slice(0, 10).map((achievement: any, index: number) => (
+            {userAchievements.slice(0, 10).map((achievement: Achievement, index: number) => (
               <View key={index} style={styles.achievementCard}>
                 <View style={styles.achievementIcon}>
-                  <Text style={styles.achievementIconText}>🎯</Text>
+                  <Ionicons name="trophy" size={20} color="white" />
                 </View>
                 <View style={styles.achievementContent}>
-                  <Text style={styles.achievementTitle}>{achievement.challengeTitle}</Text>
-                  <Text style={styles.achievementPoints}>+{achievement.pointsEarned} points</Text>
+                  <Text style={styles.achievementTitle}>
+                    {achievement.challengeTitle}
+                  </Text>
+                  <Text style={styles.achievementPoints}>
+                    +{achievement.pointsEarned} points
+                  </Text>
                   <Text style={styles.achievementDate}>
                     {new Date(achievement.completedAt).toLocaleDateString()}
                   </Text>
@@ -192,6 +271,9 @@ export default function RewardsScreen() {
           </View>
         )}
       </View>
+
+      {/* Bottom spacing */}
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
@@ -206,6 +288,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
+    gap: 12,
   },
   loadingText: {
     fontSize: 16,
@@ -217,18 +300,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
     padding: 20,
+    gap: 12,
   },
   errorText: {
     fontSize: 16,
     color: '#dc3545',
     textAlign: 'center',
-    marginBottom: 20,
   },
   retryButton: {
     backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
+    marginTop: 8,
   },
   retryText: {
     color: 'white',
@@ -265,13 +349,44 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  statPill: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#e5e7eb',
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#6b7280',
+    textAlign: 'center',
+  },
   levelProgress: {
     marginTop: 16,
   },
+  levelProgressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   levelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  levelPointsText: {
     fontSize: 14,
     color: '#6b7280',
-    marginBottom: 8,
   },
   progressBar: {
     height: 8,
@@ -291,18 +406,20 @@ const styles = StyleSheet.create({
   badgesContainer: {
     flexDirection: 'row',
   },
+  badgesContent: {
+    gap: 12,
+  },
   badgeCard: {
     backgroundColor: '#f8f9fa',
     padding: 16,
     borderRadius: 12,
-    marginRight: 12,
-    width: 120,
+    width: 140,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
   badgeIcon: {
-    fontSize: 32,
+    fontSize: 40,
     marginBottom: 8,
   },
   badgeName: {
@@ -327,7 +444,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     padding: 20,
     marginTop: 1,
-    marginBottom: 20,
   },
   achievementsList: {
     gap: 12,
@@ -349,9 +465,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
-  },
-  achievementIconText: {
-    fontSize: 20,
   },
   achievementContent: {
     flex: 1,

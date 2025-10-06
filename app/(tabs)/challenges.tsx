@@ -12,8 +12,34 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { getChallenges, joinChallenge, type Challenge } from '../../src/api/client';
+import { getChallenges, joinChallenge } from '../../src/api/client';
 import { colors } from '../../src/theme/colors';
+import { Ionicons } from '@expo/vector-icons';
+
+interface Challenge {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  points: number;
+  duration: number;
+  target: number;
+  unit: string;
+  imageUrl?: string;
+  participants: Array<{
+    user: {
+      _id: string;
+      username: string;
+    };
+    progress: number;
+  }>;
+  createdAt: string;
+  createdBy: {
+    _id: string;
+    username: string;
+  };
+}
 
 // Simple Challenge Card Component
 function SimpleChallengeCard({ 
@@ -42,18 +68,22 @@ function SimpleChallengeCard({
       </Text>
       
       <View style={styles.cardInfo}>
-        <Text style={styles.infoText}>
-          Category: {challenge.category}
-        </Text>
-        <Text style={styles.infoText}>
-          Target: {challenge.target} {challenge.unit}
-        </Text>
-        <Text style={styles.infoText}>
-          Duration: {challenge.duration} days
-        </Text>
-        <Text style={styles.infoText}>
-          Participants: {challenge.participants.length}
-        </Text>
+        <View style={styles.infoRow}>
+          <Ionicons name="folder-outline" size={16} color="#6b7280" />
+          <Text style={styles.infoText}>{challenge.category}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Ionicons name="flag-outline" size={16} color="#6b7280" />
+          <Text style={styles.infoText}>{challenge.target} {challenge.unit}</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Ionicons name="time-outline" size={16} color="#6b7280" />
+          <Text style={styles.infoText}>{challenge.duration} days</Text>
+        </View>
+        <View style={styles.infoRow}>
+          <Ionicons name="people-outline" size={16} color="#6b7280" />
+          <Text style={styles.infoText}>{challenge.participants.length} joined</Text>
+        </View>
       </View>
       
       <View style={styles.cardActions}>
@@ -80,7 +110,8 @@ export default function ChallengesScreen() {
     data: challenges = [], 
     isLoading, 
     refetch, 
-    isRefetching 
+    isRefetching,
+    error 
   } = useQuery({
     queryKey: ['challenges'],
     queryFn: getChallenges,
@@ -106,7 +137,7 @@ export default function ChallengesScreen() {
   });
 
   // Filter challenges
-  const filteredChallenges = challenges.filter((challenge) => {
+  const filteredChallenges = challenges.filter((challenge: Challenge) => {
     const matchesSearch = challenge.title.toLowerCase().includes(search.toLowerCase()) ||
                          challenge.description.toLowerCase().includes(search.toLowerCase());
     
@@ -124,7 +155,7 @@ export default function ChallengesScreen() {
     <SimpleChallengeCard
       challenge={item}
       onPress={() => router.push({ 
-        pathname: '/challenge/[id]', 
+        pathname: '/challenge/[id]' as any, 
         params: { id: item._id } 
       })}
       onJoin={() => handleJoin(item._id)}
@@ -140,6 +171,18 @@ export default function ChallengesScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
+        <Text style={styles.errorText}>Failed to load challenges</Text>
+        <Pressable style={styles.retryButton} onPress={() => refetch()}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -147,12 +190,15 @@ export default function ChallengesScreen() {
         <Text style={styles.title}>GreenStep Challenges</Text>
         
         {/* Search */}
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search challenges..."
-          value={search}
-          onChangeText={setSearch}
-        />
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={20} color="#6b7280" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search challenges..."
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
         
         {/* Filters */}
         <View style={styles.filtersContainer}>
@@ -219,6 +265,7 @@ export default function ChallengesScreen() {
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
+            <Ionicons name="leaf-outline" size={64} color="#d1d5db" />
             <Text style={styles.emptyText}>No challenges found</Text>
             <Text style={styles.emptySubtext}>
               {search || selectedCategory || selectedDifficulty 
@@ -232,7 +279,7 @@ export default function ChallengesScreen() {
       {/* Create Challenge Button */}
       <Link href="/challenge/create" asChild>
         <Pressable style={styles.fab}>
-          <Text style={styles.fabText}>+</Text>
+          <Ionicons name="add" size={24} color="white" />
         </Pressable>
       </Link>
     </View>
@@ -248,11 +295,28 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
     color: colors.text,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    marginTop: 12,
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
   header: {
     backgroundColor: 'white',
@@ -266,14 +330,23 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 16,
   },
-  searchInput: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#f8f9fa',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
     padding: 12,
     fontSize: 16,
-    marginBottom: 16,
   },
   filtersContainer: {
     gap: 8,
@@ -355,11 +428,17 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     marginBottom: 16,
-    gap: 4,
+    gap: 8,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   infoText: {
     fontSize: 12,
     color: '#6b7280',
+    textTransform: 'capitalize',
   },
   cardActions: {
     flexDirection: 'row',
@@ -400,6 +479,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
+    marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
@@ -422,10 +502,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  fabText: {
-    fontSize: 24,
-    color: 'white',
-    fontWeight: 'bold',
   },
 });

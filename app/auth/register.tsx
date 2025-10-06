@@ -18,7 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'expo-router';
 
 export default function RegisterScreen() {
-  const { register, isLoading } = useAuth();
+  const { register, loading } = useAuth();
   const router = useRouter();
 
   const [firstName, setFirstName] = useState('');
@@ -103,7 +103,7 @@ export default function RegisterScreen() {
                   placeholder="Enter your first name"
                   value={firstName}
                   onChangeText={setFirstName}
-                  editable={!isLoading}
+                  editable={loading}
                 />
               </View>
             </View>
@@ -117,7 +117,7 @@ export default function RegisterScreen() {
                   placeholder="Enter your last name"
                   value={lastName}
                   onChangeText={setLastName}
-                  editable={!isLoading}
+                  editable={loading}
                 />
               </View>
             </View>
@@ -132,7 +132,7 @@ export default function RegisterScreen() {
                   value={username}
                   onChangeText={setUsername}
                   autoCapitalize="none"
-                  editable={!isLoading}
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -148,7 +148,7 @@ export default function RegisterScreen() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  editable={!isLoading}
+                  editable={loading}
                 />
               </View>
             </View>
@@ -163,7 +163,7 @@ export default function RegisterScreen() {
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"
-                  editable={!isLoading}
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -178,7 +178,7 @@ export default function RegisterScreen() {
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
-                  editable={!isLoading}
+                  editable={!loading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}
@@ -203,7 +203,7 @@ export default function RegisterScreen() {
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
                   secureTextEntry={!showConfirmPassword}
-                  editable={!isLoading}
+                  editable={!loading}
                 />
                 <TouchableOpacity
                   onPress={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -219,11 +219,11 @@ export default function RegisterScreen() {
             </View>
 
             <TouchableOpacity
-              style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
+              style={[styles.registerButton, loading && styles.registerButtonDisabled]}
               onPress={handleRegister}
-              disabled={isLoading}
+              disabled={loading}
             >
-              {isLoading ? (
+              {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.registerButtonText}>Register</Text>
@@ -233,7 +233,7 @@ export default function RegisterScreen() {
             <TouchableOpacity
               onPress={() => router.replace('/auth/login')}
               style={styles.loginLink}
-              disabled={isLoading}
+              disabled={loading}
             >
               <Text style={styles.loginLinkText}>
                 Already have an account? <Text style={styles.loginLinkBold}>Login</Text>
