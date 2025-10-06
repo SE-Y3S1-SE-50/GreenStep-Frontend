@@ -62,6 +62,10 @@ export default function RootLayout() {
 
           {/* Tabs Group (contains protected tabs) */}
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="challenge/[id]" options={{ title: 'Challenge' }} />
+          <Stack.Screen name="challenge/create" options={{ title: 'Create Challenge' }} />
+          <Stack.Screen name="recommendations" options={{ presentation: 'modal', title: 'Recommendations' }} />
+          
         </Stack>
       </DashboardProvider>
     </AuthProvider>

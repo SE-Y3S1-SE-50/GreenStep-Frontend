@@ -81,6 +81,15 @@ export default function TabsLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="challenges"
+        options={{
+          title: 'Challenges',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="leaf-outline" color={color} size={size} />
+          ),
+        }}
+      />
 
       <Tabs.Screen
         name="profile"
