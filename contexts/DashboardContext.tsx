@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useAuth } from './AuthContext';
 import apiService from '../services/apiService';
 import { Tree, CareRecord, CareReminder, DashboardStats } from '../types/dashboard';
 
@@ -48,6 +49,7 @@ interface DashboardProviderProps {
 }
 
 export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }) => {
+  const { isAuthenticated } = useAuth();
   const [trees, setTrees] = useState<Tree[]>([]);
   const [careRecords, setCareRecords] = useState<CareRecord[]>([]);
   const [reminders, setReminders] = useState<CareReminder[]>([]);
@@ -59,38 +61,41 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
   // Tree management methods
   const refreshTrees = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      clearError();
-      
-      // Use real API data (authentication bypassed on backend)
-      const response = await apiService.getTrees({ limit: 100 });
-      
-      if (response.success && response.data) {
-        setTrees(response.data.trees);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch trees');
-    } finally {
-      setIsLoading(false);
+  try {
+    setIsLoading(true);
+    clearError();
+    
+    const response = await apiService.getTrees({ limit: 100 });
+    
+    if (response.success && response.data && response.data.trees) {
+      setTrees(response.data.trees);
+    } else {
+      setTrees([]); // Set empty array if no trees returned
     }
-  };
+  } catch (err) {
+    setError(err instanceof Error ? err.message : 'Failed to fetch trees');
+    console.error('Error fetching trees:', err);
+    setTrees([]); // Set empty array on error
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const addTree = async (treeData: Omit<Tree, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
     try {
       setIsLoading(true);
       clearError();
       
-      // Use real API call (authentication bypassed on backend)
       const response = await apiService.addTree(treeData);
       
       if (response.success && response.data) {
-        await refreshTrees(); // Refresh the trees list
+        await refreshTrees();
         return true;
       }
       return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add tree');
+      console.error('Error adding tree:', err);
       return false;
     } finally {
       setIsLoading(false);
@@ -105,7 +110,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       const response = await apiService.updateTree(id, updates);
       
       if (response.success && response.data) {
-        // Update the tree in the local state
         setTrees(prevTrees => 
           prevTrees.map(tree => 
             tree.id === id ? { ...tree, ...updates } : tree
@@ -116,6 +120,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update tree');
+      console.error('Error updating tree:', err);
       return false;
     } finally {
       setIsLoading(false);
@@ -132,13 +137,10 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       console.log('DashboardContext: Delete response:', response);
       
       if (response.success) {
-        // Remove the tree from local state
         setTrees(prevTrees => {
           console.log('DashboardContext: Before deletion, trees count:', prevTrees.length);
           const filtered = prevTrees.filter(tree => tree.id !== id);
           console.log('DashboardContext: After deletion, trees count:', filtered.length);
-          console.log('DashboardContext: Looking for tree with ID:', id);
-          console.log('DashboardContext: Available tree IDs:', prevTrees.map(t => t.id));
           return filtered;
         });
         return true;
@@ -158,28 +160,29 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
   // Care records methods
   const refreshCareRecords = async (): Promise<void> => {
-    try {
-      setIsLoading(true);
-      clearError();
-      
-      console.log('🔍 Context: Fetching care records...');
-      
-      // Use real API data (authentication bypassed on backend)
-      const response = await apiService.getCareRecords({ limit: 100 });
-      console.log('🔍 Context: Care records API response:', response);
-      
-      if (response.success && response.data) {
-        const records = (response as any).data?.careRecords || (response as any).data || [];
-        console.log('🔍 Context: Setting care records:', Array.isArray(records) ? records.length : 0, 'records');
-        setCareRecords(records);
-      }
-    } catch (err) {
-      console.error('🔍 Context: Error fetching care records:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch care records');
-    } finally {
-      setIsLoading(false);
+  try {
+    setIsLoading(true);
+    clearError();
+    
+    console.log('🔍 Context: Fetching care records...');
+    
+    const response = await apiService.getCareRecords({ limit: 100 });
+    console.log('🔍 Context: Care records API response:', response);
+    
+    if (response.success && response.data && response.data.careRecords) {
+      console.log('🔍 Context: Setting care records:', response.data.careRecords.length, 'records');
+      setCareRecords(response.data.careRecords);
+    } else {
+      setCareRecords([]); // Set empty array if no records returned
     }
-  };
+  } catch (err) {
+    console.error('🔍 Context: Error fetching care records:', err);
+    setError(err instanceof Error ? err.message : 'Failed to fetch care records');
+    setCareRecords([]); // Set empty array on error
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const addCareRecord = async (careData: Omit<CareRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
     try {
@@ -188,23 +191,17 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       
       console.log('🔍 Context: Adding care record with data:', careData);
       
-      // Use real API call (authentication bypassed on backend)
       const response = await apiService.addCareRecord(careData);
       console.log('🔍 Context: API response:', response);
       
       if (response.success && response.data) {
         const created = (response as any).data;
-        // Normalize id
         const normalized = { ...created, id: created._id || created.id } as CareRecord;
-        // Optimistic update
         setCareRecords(prev => [normalized, ...prev]);
-        // Also refresh stats in background (no blocking UI)
         refreshStats();
         return true;
       } else {
         console.log('🔍 Context: Failed to add care record - Full response:', response);
-        console.log('🔍 Context: Error message:', response.error);
-        console.log('🔍 Context: Response message:', response.message);
         setError(response.error || response.message || 'Failed to add care record');
         return false;
       }
@@ -223,7 +220,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       setIsLoading(true);
       clearError();
       
-      // Use real API data (authentication bypassed on backend)
       const response = await apiService.getCareReminders();
       
       if (response.success && response.data) {
@@ -231,6 +227,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch reminders');
+      console.error('Error fetching reminders:', err);
     } finally {
       setIsLoading(false);
     }
@@ -244,7 +241,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       const response = await apiService.markReminderCompleted(id);
       
       if (response.success && response.data) {
-        // Update the reminder in local state
         setReminders(prevReminders => 
           prevReminders.map(reminder => 
             reminder.id === id ? { ...reminder, isCompleted: true } : reminder
@@ -255,6 +251,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       return false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to mark reminder as completed');
+      console.error('Error marking reminder:', err);
       return false;
     } finally {
       setIsLoading(false);
@@ -267,7 +264,6 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       setIsLoading(true);
       clearError();
       
-      // Use real API data (authentication bypassed on backend)
       const response = await apiService.getDashboardStats();
       
       if (response.success && response.data) {
@@ -275,6 +271,7 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch dashboard stats');
+      console.error('Error fetching stats:', err);
     } finally {
       setIsLoading(false);
     }
@@ -305,23 +302,32 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       return null;
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to fetch ${type} data`);
+      console.error(`Error fetching ${type} data:`, err);
       return null;
     }
   };
 
-  // Load initial data when component mounts
+  // Load initial data when user is authenticated
   useEffect(() => {
-    const loadInitialData = async () => {
-      await Promise.all([
-        refreshTrees(),
-        refreshCareRecords(),
-        refreshReminders(),
-        refreshStats(),
-      ]);
-    };
+    if (isAuthenticated) {
+      const loadInitialData = async () => {
+        await Promise.all([
+          refreshTrees(),
+          refreshCareRecords(),
+          refreshReminders(),
+          refreshStats(),
+        ]);
+      };
 
-    loadInitialData();
-  }, []);
+      loadInitialData();
+    } else {
+      // Clear data when user logs out
+      setTrees([]);
+      setCareRecords([]);
+      setReminders([]);
+      setStats(null);
+    }
+  }, [isAuthenticated]);
 
   const value: DashboardContextType = {
     // State

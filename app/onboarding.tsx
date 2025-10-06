@@ -8,7 +8,6 @@ import {
   FlatList,
   StatusBar,
   SafeAreaView,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -82,8 +81,8 @@ export default function OnboardingScreen() {
     try {
       // Mark onboarding as completed
       await AsyncStorage.setItem('onboarding_completed', 'true');
-      // Navigate to auth or main app
-      router.replace('/(tabs)/dashboard');
+      // Navigate to login
+      router.replace('/auth/login');
     } catch (error) {
       console.error('Error saving onboarding status:', error);
     }

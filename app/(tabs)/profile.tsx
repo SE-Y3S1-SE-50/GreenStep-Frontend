@@ -11,10 +11,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
 import { onboardingUtils } from '../../utils/onboardidng';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { user, logout } = useAuth();
 
   const handleResetOnboarding = async () => {
     Alert.alert(
@@ -28,6 +30,23 @@ export default function ProfileScreen() {
           onPress: async () => {
             await onboardingUtils.resetOnboarding();
             router.replace('/onboarding');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
           },
         },
       ]
@@ -76,7 +95,6 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
             
       <View style={styles.header}>
@@ -91,8 +109,12 @@ export default function ProfileScreen() {
               <Ionicons name="person" size={48} color="#16a34a" />
             </View>
           </View>
-          <Text style={styles.userName}>Demo User</Text>
-          <Text style={styles.userEmail}>demo@greenstep.app</Text>
+          <Text style={styles.userName}>
+            {user?.firstName && user?.lastName 
+              ? `${user.firstName} ${user.lastName}` 
+              : user?.username || 'User'}
+          </Text>
+          <Text style={styles.userEmail}>{user?.email || 'user@greenstep.app'}</Text>
           
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
@@ -138,7 +160,7 @@ export default function ProfileScreen() {
         {/* Logout Button */}
         <TouchableOpacity 
           style={styles.logoutButton}
-          onPress={() => Alert.alert('Logout', 'Logout functionality coming soon!')}
+          onPress={handleLogout}
         >
           <Ionicons name="log-out-outline" size={20} color="#ef4444" />
           <Text style={styles.logoutText}>Logout</Text>

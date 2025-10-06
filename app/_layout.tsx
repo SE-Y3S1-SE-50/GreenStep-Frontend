@@ -31,11 +31,14 @@ export default function RootLayout() {
     if (isLoading) return;
 
     const inOnboarding = segments[0] === 'onboarding';
+    const inAuth = segments[0] === 'auth';
 
     if (!hasCompletedOnboarding && !inOnboarding) {
+      // User hasn't completed onboarding, redirect to onboarding
       router.replace('/onboarding');
     } else if (hasCompletedOnboarding && inOnboarding) {
-      router.replace('/(tabs)/dashboard');
+      // User has completed onboarding but is on onboarding page, redirect to auth
+      router.replace('/auth/login');
     }
   }, [hasCompletedOnboarding, isLoading, segments]);
 
@@ -55,9 +58,9 @@ export default function RootLayout() {
           <Stack.Screen name="onboarding" />
 
           {/* Auth Flow (Login/Register) */}
-          <Stack.Screen name="/auth" />
+          <Stack.Screen name="auth" />
 
-          {/* Tabs Group (contains protected tabs + AuthWrapper inside) */}
+          {/* Tabs Group (contains protected tabs) */}
           <Stack.Screen name="(tabs)" />
         </Stack>
       </DashboardProvider>
