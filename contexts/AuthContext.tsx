@@ -1,8 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useSegments } from 'expo-router';
-
-const API_URL = 'http://localhost:8000/api/auth';
+import { API_CONFIG } from '../config/api';
 
 interface User {
   id: string;
@@ -85,16 +84,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      console.log('Attempting login with:', { username });
+      console.log('🔐 Attempting login to:', `${API_CONFIG.BASE_URL}/api/auth/login`);
+      console.log('🔐 With credentials:', { username });
       
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: JSON.stringify({ username, password }),
       });
 
+      console.log('🔐 Response status:', response.status);
       const data = await response.json();
-      console.log('Login response:', data);
+      console.log('🔐 Response data:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
@@ -102,7 +106,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Create user object from response
       const userData: User = {
-        id: data.userId || 'temp-id', // Backend should return userId
+        id: data.userId || 'temp-id',
         username: username,
         email: data.email || '',
         firstName: data.firstName || '',
@@ -115,7 +119,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return true;
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('🔐 Login error:', error);
+      console.error('🔐 Error details:', error.message);
       return false;
     } finally {
       setIsLoading(false);
@@ -132,16 +137,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }): Promise<boolean> => {
     setIsLoading(true);
     try {
-      console.log('Attempting registration with:', userData);
+      console.log('📝 Attempting registration to:', `${API_CONFIG.BASE_URL}/api/auth/register`);
+      console.log('📝 With data:', { ...userData, password: '***' });
       
-      const response = await fetch(`${API_URL}/register`, {
+      const response = await fetch(`${API_CONFIG.BASE_URL}/api/auth/register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
         body: JSON.stringify(userData),
       });
 
+      console.log('📝 Response status:', response.status);
       const resData = await response.json();
-      console.log('Registration response:', resData);
+      console.log('📝 Response data:', resData);
 
       if (!response.ok) {
         throw new Error(resData.message || 'Registration failed');
@@ -149,7 +159,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       return true;
     } catch (error: any) {
-      console.error('Registration error:', error);
+      console.error('📝 Registration error:', error);
+      console.error('📝 Error details:', error.message);
       return false;
     } finally {
       setIsLoading(false);

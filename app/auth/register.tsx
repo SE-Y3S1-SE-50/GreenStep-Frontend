@@ -64,7 +64,10 @@ export default function RegisterScreen() {
         },
       ]);
     } else {
-      Alert.alert('Registration Failed', 'Please try again.');
+      Alert.alert(
+        'Registration Failed', 
+        'Unable to create account. Please check your connection and try again.'
+      );
     }
   };
 

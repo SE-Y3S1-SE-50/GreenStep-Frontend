@@ -1,5 +1,5 @@
 import { Tree, CareRecord, GrowthMeasurement, CareReminder, DashboardStats } from '../types/dashboard';
-import { API_CONFIG, getApiUrl, DEFAULT_HEADERS, ERROR_MESSAGES } from '../config/api';
+import { API_CONFIG, DEFAULT_HEADERS } from '../config/api';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -27,9 +27,9 @@ interface PaginationResponse<T> {
 class ApiService {
   private baseURL: string;
 
-  constructor(baseURL: string = API_CONFIG.BASE_URL) {
-    this.baseURL = baseURL;
-    console.log('[ApiService] BASE_URL =', this.baseURL);
+  constructor() {
+    this.baseURL = API_CONFIG.BASE_URL;
+    console.log('[ApiService] Initialized with BASE_URL:', this.baseURL);
   }
 
   private async request<T>(
@@ -42,6 +42,8 @@ class ApiService {
       ...options.headers,
     };
 
+    console.log(`[ApiService] ${options.method || 'GET'} ${url}`);
+
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
@@ -49,7 +51,6 @@ class ApiService {
       const response = await fetch(url, {
         ...options,
         headers,
-        credentials: 'include', // Include cookies for CORS
         signal: controller.signal,
       });
 
@@ -62,8 +63,8 @@ class ApiService {
       }
 
       return data;
-    } catch (error) {
-      console.error('API request failed:', error);
+    } catch (error: any) {
+      console.error('[ApiService] Request failed:', error.message);
       throw error;
     }
   }
@@ -84,7 +85,7 @@ class ApiService {
       });
     }
 
-    const endpoint = `/dashboard/trees${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const endpoint = `/api/dashboard/trees${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await this.request<any>(endpoint);
     
     // Transform _id to id for frontend compatibility
@@ -109,25 +110,25 @@ class ApiService {
       recentCareRecords: CareRecord[];
       recentGrowthMeasurements: GrowthMeasurement[];
       upcomingReminders: CareReminder[];
-    }>(`/dashboard/trees/${id}`);
+    }>(`/api/dashboard/trees/${id}`);
   }
 
   async addTree(treeData: Omit<Tree, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<Tree>> {
-    return this.request<Tree>('/dashboard/trees', {
+    return this.request<Tree>('/api/dashboard/trees', {
       method: 'POST',
       body: JSON.stringify(treeData),
     });
   }
 
   async updateTree(id: string, updates: Partial<Tree>): Promise<ApiResponse<Tree>> {
-    return this.request<Tree>(`/dashboard/trees/${id}`, {
+    return this.request<Tree>(`/api/dashboard/trees/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
   }
 
   async deleteTree(id: string): Promise<ApiResponse<{ message: string }>> {
-    return this.request<{ message: string }>(`/dashboard/trees/${id}`, {
+    return this.request<{ message: string }>(`/api/dashboard/trees/${id}`, {
       method: 'DELETE',
     });
   }
@@ -148,7 +149,7 @@ class ApiService {
       });
     }
 
-    const endpoint = `/dashboard/care-records${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const endpoint = `/api/dashboard/care-records${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     const response = await this.request<any>(endpoint);
     
     // Transform _id to id for frontend compatibility
@@ -163,7 +164,7 @@ class ApiService {
   }
 
   async addCareRecord(careData: Omit<CareRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<CareRecord>> {
-    const response = await this.request<any>('/dashboard/care-records', {
+    const response = await this.request<any>('/api/dashboard/care-records', {
       method: 'POST',
       body: JSON.stringify(careData),
     });
@@ -180,7 +181,7 @@ class ApiService {
   }
 
   async updateCareRecord(id: string, updates: Partial<CareRecord>): Promise<ApiResponse<CareRecord>> {
-    return this.request<CareRecord>(`/dashboard/care-records/${id}`, {
+    return this.request<CareRecord>(`/api/dashboard/care-records/${id}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
     });
@@ -188,11 +189,11 @@ class ApiService {
 
   // Growth Measurements
   async getGrowthMeasurements(treeId: string): Promise<ApiResponse<GrowthMeasurement[]>> {
-    return this.request<GrowthMeasurement[]>(`/dashboard/trees/${treeId}/growth-measurements`);
+    return this.request<GrowthMeasurement[]>(`/api/dashboard/trees/${treeId}/growth-measurements`);
   }
 
   async addGrowthMeasurement(measurementData: Omit<GrowthMeasurement, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<ApiResponse<GrowthMeasurement>> {
-    return this.request<GrowthMeasurement>('/dashboard/growth-measurements', {
+    return this.request<GrowthMeasurement>('/api/dashboard/growth-measurements', {
       method: 'POST',
       body: JSON.stringify(measurementData),
     });
@@ -213,31 +214,31 @@ class ApiService {
       });
     }
 
-    const endpoint = `/dashboard/care-reminders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+    const endpoint = `/api/dashboard/care-reminders${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
     return this.request<CareReminder[]>(endpoint);
   }
 
   async markReminderCompleted(id: string): Promise<ApiResponse<CareReminder>> {
-    return this.request<CareReminder>(`/dashboard/care-reminders/${id}/complete`, {
+    return this.request<CareReminder>(`/api/dashboard/care-reminders/${id}/complete`, {
       method: 'PATCH',
     });
   }
 
   // Analytics
   async getDashboardStats(): Promise<ApiResponse<DashboardStats>> {
-    return this.request<DashboardStats>('/dashboard/stats');
+    return this.request<DashboardStats>('/api/dashboard/stats');
   }
 
   async getAnalyticsReport(period: string = '6months'): Promise<ApiResponse<any>> {
-    return this.request<any>(`/dashboard/analytics/report?period=${period}`);
+    return this.request<any>(`/api/dashboard/analytics/report?period=${period}`);
   }
 
   async getGrowthTrendData(months: number = 6): Promise<ApiResponse<any>> {
-    return this.request<any>(`/dashboard/analytics/growth-trend?months=${months}`);
+    return this.request<any>(`/api/dashboard/analytics/growth-trend?months=${months}`);
   }
 
   async getCommunityAnalytics(): Promise<ApiResponse<any>> {
-    return this.request<any>(`/dashboard/analytics/community`);
+    return this.request<any>(`/api/dashboard/analytics/community`);
   }
 }
 

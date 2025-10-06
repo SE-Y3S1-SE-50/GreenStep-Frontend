@@ -33,7 +33,10 @@ export default function LoginScreen() {
     const success = await login(username, password);
 
     if (!success) {
-      Alert.alert('Login Failed', 'Invalid credentials. Please try again.');
+      Alert.alert(
+        'Login Failed', 
+        'Invalid credentials or network error. Please check your connection and try again.'
+      );
     }
   };
 

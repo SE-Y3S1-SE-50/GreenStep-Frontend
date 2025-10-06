@@ -1,31 +1,44 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
+// Get the local IP address for React Native
+const getBaseUrl = () => {
+  if (__DEV__) {
+    // For Android Emulator, use 10.0.2.2
+    // For iOS Simulator, use localhost
+    // For physical devices, use your computer's IP address
+    if (Platform.OS === 'android') {
+      return 'http://172.31.16.1:8000'; // Android Emulator
+      // return 'http://192.168.1.X:8000'; // Replace X with your computer's IP for physical device
+    }
+    return 'http://localhost:8000'; // iOS Simulator
+  }
+  return 'http://localhost:8000'; // Production
+};
+
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: __DEV__ 
-    ? 'http://localhost:8000'  // Development - using localhost for authentication
-    : 'http://localhost:8000', // Production
+  BASE_URL: getBaseUrl(),
   
   TIMEOUT: 10000, // 10 seconds
   
   ENDPOINTS: {
     AUTH: {
-      LOGIN: 'api/auth/login',
-      REGISTER: 'api/auth/register',
-      LOGOUT: '/logout',
-      CHECK_AUTH: '/check-cookie',
+      LOGIN: '/api/auth/login',
+      REGISTER: '/api/auth/register',
+      LOGOUT: '/api/logout',
+      CHECK_AUTH: '/api/check-cookie',
     },
     DASHBOARD: {
-      TREES: '/dashboard/trees',
-      CARE_RECORDS: '/dashboard/care-records',
-      GROWTH_MEASUREMENTS: '/dashboard/growth-measurements',
-      CARE_REMINDERS: '/dashboard/care-reminders',
-      STATS: '/dashboard/stats',
+      TREES: '/api/dashboard/trees',
+      CARE_RECORDS: '/api/dashboard/care-records',
+      GROWTH_MEASUREMENTS: '/api/dashboard/growth-measurements',
+      CARE_REMINDERS: '/api/dashboard/care-reminders',
+      STATS: '/api/dashboard/stats',
       ANALYTICS: {
-        REPORT: '/dashboard/analytics/report',
-        GROWTH_TREND: '/dashboard/analytics/growth-trend',
-        COMMUNITY: '/dashboard/analytics/community',
+        REPORT: '/api/dashboard/analytics/report',
+        GROWTH_TREND: '/api/dashboard/analytics/growth-trend',
+        COMMUNITY: '/api/dashboard/analytics/community',
       },
     },
   },

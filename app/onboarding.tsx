@@ -48,15 +48,7 @@ const slides: OnboardingSlide[] = [
     icon: 'earth',
     backgroundColor: '#fef3c7',
     iconColor: '#f59e0b',
-  },
-  {
-    id: '4',
-    title: 'Join the Community',
-    description: 'Connect with fellow tree planters, share experiences, and learn from environmental experts.',
-    icon: 'people',
-    backgroundColor: '#e9d5ff',
-    iconColor: '#8b5cf6',
-  },
+  }
 ];
 
 export default function OnboardingScreen() {
