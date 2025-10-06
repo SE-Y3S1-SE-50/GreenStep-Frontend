@@ -1,15 +1,17 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AuthWrapper from '../../components/AuthWrapper';
 
 export default function Layout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#007AFF',
-        tabBarInactiveTintColor: 'gray',
-      }}
-    >
+    <AuthWrapper>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: '#007AFF',
+          tabBarInactiveTintColor: 'gray',
+        }}
+      >
       <Tabs.Screen
         name="index"
         options={{
@@ -48,6 +50,15 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: 'Dashboard',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="analytics-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
@@ -56,6 +67,7 @@ export default function Layout() {
           ),
         }}
       />
-    </Tabs>
+      </Tabs>
+    </AuthWrapper>
   );
 }

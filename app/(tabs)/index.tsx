@@ -25,10 +25,11 @@ export default function HomeScreen() {
 
       <ThemedView style={styles.stepContainer}>
         <ThemedText>Navigate:</ThemedText>
-        <Link href="/education" style={styles.link}>Go to Education</Link>
-        <Link href="/profile" style={styles.link}>Go to Profile</Link>
-        <Link href="/community" style={styles.link}>Go to Community</Link>
-        <Link href="/rewards" style={styles.link}>Go to Rewards</Link>
+        <Link href="/dashboard" style={styles.link}>🌱 Tree Care Dashboard</Link>
+        <Link href="/education" style={styles.link}>📚 Education Center</Link>
+        <Link href="/community" style={styles.link}>👥 Community</Link>
+        <Link href="/rewards" style={styles.link}>🎁 Rewards</Link>
+        <Link href="/profile" style={styles.link}>👤 Profile</Link>
       </ThemedView>
     </ParallaxScrollView>
   );
