@@ -13,14 +13,15 @@ export default function Layout() {
         }}
       >
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
-          title: 'Home',
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
+            <Ionicons name="analytics-outline" color={color} size={size} />
           ),
         }}
       />
+     
       <Tabs.Screen
         name="education"
         options={{
@@ -49,15 +50,7 @@ export default function Layout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: 'Dashboard',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="analytics-outline" color={color} size={size} />
-          ),
-        }}
-      />
+      
       <Tabs.Screen
         name="profile"
         options={{
