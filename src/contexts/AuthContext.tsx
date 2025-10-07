@@ -125,10 +125,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       console.log('AuthContext: Logout completed successfully');
+      
+      // Return a promise that resolves immediately
+      return Promise.resolve();
     } catch (error) {
       console.error('AuthContext: Logout error:', error);
       // Even if logout API fails, we still want to clear local state
       console.log('AuthContext: Logout API failed, but local state cleared');
+      return Promise.resolve();
     }
   };
 

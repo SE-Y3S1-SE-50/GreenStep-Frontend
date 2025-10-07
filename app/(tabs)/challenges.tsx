@@ -22,7 +22,10 @@ export default function ChallengesScreen() {
   
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
+
+  // Debug authentication state
+  console.log('Challenges screen - Auth state:', { isAuthenticated, user: user?.id });
 
   const { 
     data: challenges = [], 
@@ -52,10 +55,16 @@ export default function ChallengesScreen() {
         response: error?.response?.data,
         status: error?.response?.status
       });
+      
       let errorMessage = 'Failed to join challenge. Please try again.';
 
       if (error?.response?.status === 401) {
         errorMessage = 'Please log in to join challenges.';
+      } else if (error?.response?.status === 400 && error?.response?.data?.message?.includes('Already joined')) {
+        errorMessage = 'You have already joined this challenge!';
+        // Don't show alert for already joined, just update the UI
+        queryClient.invalidateQueries({ queryKey: ['challenges'] });
+        return;
       } else if (error?.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error?.message) {
@@ -79,6 +88,38 @@ export default function ChallengesScreen() {
     joinMutation.mutate(challengeId);
   };
 
+  const handleLogout = async () => {
+    console.log('Logout button clicked in challenges screen');
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: async () => {
+            console.log('Logout confirmed in challenges screen');
+            try {
+              await logout();
+              console.log('Logout successful, redirecting...');
+              // Force redirect to login screen
+              setTimeout(() => {
+                router.replace('/auth/login');
+              }, 100);
+            } catch (error) {
+              console.error('Logout error:', error);
+              // Still redirect even if logout fails
+              setTimeout(() => {
+                router.replace('/auth/login');
+              }, 100);
+            }
+          }
+        }
+      ]
+    );
+  };
+
 
 
   const filteredChallenges = challenges.filter((challenge) => {
@@ -93,50 +134,93 @@ export default function ChallengesScreen() {
   const categories = ['energy', 'waste', 'transport', 'water', 'food', 'other'];
   const difficulties = ['easy', 'medium', 'hard'];
 
-  const renderChallenge = ({ item }: { item: any }) => (
-    <View style={styles.challengeCard}>
-      <View style={styles.challengeHeader}>
-        <Text style={styles.challengeTitle}>{item.title}</Text>
-        <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(item.difficulty) }]}>
-          <Text style={styles.difficultyText}>{item.difficulty}</Text>
+  const renderChallenge = ({ item }: { item: any }) => {
+    // Check if user has already joined this challenge
+    const hasJoined = item.participants?.some((p: any) => p.user._id === user?.id || p.user.id === user?.id);
+    
+    return (
+      <View style={styles.challengeCard}>
+        <View style={styles.challengeHeader}>
+          <Text style={styles.challengeTitle}>{item.title}</Text>
+          <View style={[styles.difficultyBadge, { backgroundColor: getDifficultyColor(item.difficulty) }]}>
+            <Text style={styles.difficultyText}>{item.difficulty}</Text>
+          </View>
+        </View>
+        
+        <Text style={styles.challengeDescription}>{item.description}</Text>
+        
+        <View style={styles.challengeMeta}>
+          <Text style={styles.challengeCategory}>{item.category}</Text>
+          <Text style={styles.challengePoints}>{item.points} points</Text>
+          <Text style={styles.challengeDuration}>{item.duration} days</Text>
+        </View>
+        
+        <View style={styles.challengeActions}>
+          <TouchableOpacity 
+            style={styles.viewButton}
+            onPress={() => router.push(`/challenge/${item._id}`)}
+          >
+            <Text style={styles.viewButtonText}>View Details</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.joinButton, hasJoined && styles.joinedButton]}
+            onPress={() => handleJoin(item._id)}
+            disabled={joinMutation.isPending || hasJoined}
+          >
+            {joinMutation.isPending ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text style={styles.joinButtonText}>
+                {hasJoined ? 'Joined ✓' : 'Join Challenge'}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
       </View>
-      
-      <Text style={styles.challengeDescription}>{item.description}</Text>
-      
-      <View style={styles.challengeMeta}>
-        <Text style={styles.challengeCategory}>{item.category}</Text>
-        <Text style={styles.challengePoints}>{item.points} points</Text>
-        <Text style={styles.challengeDuration}>{item.duration} days</Text>
-      </View>
-      
-      <View style={styles.challengeActions}>
-        <TouchableOpacity 
-          style={styles.viewButton}
-          onPress={() => {/* View details */}}
-        >
-          <Text style={styles.viewButtonText}>View Details</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.joinButton}
-          onPress={() => handleJoin(item._id)}
-          disabled={joinMutation.isPending}
-        >
-          {joinMutation.isPending ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.joinButtonText}>Join Challenge</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+    );
+  };
 
+
+  if (!isAuthenticated) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>GreenStep Challenges</Text>
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Please log in to view challenges</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => {
+            console.log('Login button clicked from challenges screen');
+            router.replace('/auth/login');
+          }}>
+            <Text style={styles.retryButtonText}>Go to Login</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>GreenStep Challenges</Text>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.logoutButton}
+            onPress={handleLogout}
+          >
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.createButton}
+            onPress={() => {
+              console.log('Create button clicked, navigating to create challenge');
+              router.push('/challenge/create');
+            }}
+          >
+            <Text style={styles.createButtonText}>+ Create</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <TextInput
@@ -229,6 +313,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     backgroundColor: 'white',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  createButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  createButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  logoutButton: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ef4444',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
   title: {
     fontSize: 24,
@@ -369,6 +503,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  joinedButton: {
+    backgroundColor: '#10B981', // Green color for joined state
   },
   joinButtonText: {
     color: 'white',

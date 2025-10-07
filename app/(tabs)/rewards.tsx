@@ -42,10 +42,18 @@ export default function RewardsScreen() {
     enabled: isAuthenticated
   });
 
-  // Redirect to login if not authenticated - moved after all hooks
+  // Show login prompt if not authenticated - moved after all hooks
   if (!authLoading && !isAuthenticated) {
-    router.replace('/auth/login');
-    return null;
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Please log in to view your rewards</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => router.replace('/auth/login')}>
+            <Text style={styles.retryText}>Go to Login</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   }
 
   const onRefresh = async () => {

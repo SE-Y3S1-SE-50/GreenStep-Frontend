@@ -175,16 +175,21 @@ export const login = async (payload: LoginRequest): Promise<LoginResponse> => {
   try {
     const { data, headers } = await api.post('/auth/login', payload);
     
-    // Extract token from cookie if available
-    const setCookieHeader = headers['set-cookie'];
-    if (setCookieHeader) {
-      const tokenCookie = setCookieHeader.find((cookie: string) => 
-        cookie.startsWith('token=')
-      );
-      if (tokenCookie) {
-        const token = tokenCookie.split('token=')[1].split(';')[0];
-        await storeToken(token);
-        data.token = token;
+    // Store token from response body (our backend sends it there)
+    if (data.token) {
+      await storeToken(data.token);
+    } else {
+      // Fallback: Extract token from cookie if available
+      const setCookieHeader = headers['set-cookie'];
+      if (setCookieHeader) {
+        const tokenCookie = setCookieHeader.find((cookie: string) => 
+          cookie.startsWith('token=')
+        );
+        if (tokenCookie) {
+          const token = tokenCookie.split('token=')[1].split(';')[0];
+          await storeToken(token);
+          data.token = token;
+        }
       }
     }
     
@@ -217,15 +222,18 @@ export const checkCookie = async () => {
 
 export const logout = async () => {
   try {
+    // Clear token first
     await removeStoredToken();
-    const response = await axios.post(`${apiBaseUrl.replace('/api', '')}/logout`, {}, {
+    
+    // Call logout endpoint (it's at root level, not under /api)
+    const baseUrl = apiBaseUrl.replace('/api', '');
+    const response = await axios.post(`${baseUrl}/logout`, {}, {
       withCredentials: true
     });
     return response.data;
   } catch (error) {
-    console.error('Logout error:', error);
-    // Still clear token even if logout fails
-    await removeStoredToken();
+    console.error('Logout API error:', error);
+    // Token is already cleared, so we can still return success
     return { success: true, message: 'Logged out successfully' };
   }
 };
@@ -309,5 +317,38 @@ export const getUserAchievements = async () => {
     throw error;
   }
 };
+
+export const getChallenge = async (id: string): Promise<Challenge> => {
+  try {
+    const { data } = await api.get(`/challenges/${id}`);
+    return data;
+  } catch (error) {
+    console.error('Get challenge error:', error);
+    throw error;
+  }
+};
+
+export const updateChallengeProgress = async (id: string, progress: number): Promise<Challenge> => {
+  try {
+    const { data } = await api.put(`/challenges/${id}/progress`, { progress });
+    return data.challenge;
+  } catch (error) {
+    console.error('Update progress error:', error);
+    throw error;
+  }
+};
+
+export const getLeaderboard = async (challengeId: string) => {
+  try {
+    const { data } = await api.get(`/challenges/${challengeId}/leaderboard`);
+    return data;
+  } catch (error) {
+    console.error('Get leaderboard error:', error);
+    throw error;
+  }
+};
+
+// Alias for compatibility
+export const postProgress = updateChallengeProgress;
 
 export default api;

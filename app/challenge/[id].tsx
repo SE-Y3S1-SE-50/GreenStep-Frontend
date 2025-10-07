@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { View, Text, Pressable, Alert, ScrollView } from 'react-native';
+import { View, Text, Pressable, Alert, ScrollView, TouchableOpacity } from 'react-native';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getChallenge, getLeaderboard, joinChallenge, postProgress } from '../../src/api/client';
 import Badge from '../../src/components/Badge';
@@ -57,8 +57,21 @@ export default function ChallengeDetailScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16 }}>
-      <View style={{ gap: 12 }}>
+    <View style={{ flex: 1, backgroundColor: colors.surface }}>
+      {/* Header with back button */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Challenge Details</Text>
+        <View style={{ width: 60 }} />
+      </View>
+      
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <View style={{ gap: 12 }}>
         <View style={{ alignItems: 'center', gap: 12 }}>
           <Badge name={challenge.title} uri={challenge.badgeUrl} size={96} />
           <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text }}>{challenge.title}</Text>
@@ -83,9 +96,37 @@ export default function ChallengeDetailScreen() {
 
         <Text style={{ marginTop: 12, fontSize: 18, fontWeight: '700', color: colors.text }}>Leaderboard</Text>
         {leaderboard ? <LeaderboardList data={leaderboard} /> : null}
-      </View>
-    </ScrollView>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
-
+const styles = {
+  header: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  backButtonText: {
+    color: colors.text,
+    fontWeight: '600' as const,
+    fontSize: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800' as const,
+    color: colors.text,
+  },
+};

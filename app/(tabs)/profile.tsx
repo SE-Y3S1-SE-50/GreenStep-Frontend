@@ -58,13 +58,15 @@ export default function ProfileScreen() {
     setRefreshing(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (isLoggingOut) {
       console.log('Logout already in progress, ignoring click');
       return;
     }
     
     console.log('Logout button clicked');
+    
+    // Show confirmation dialog
     Alert.alert(
       'Logout',
       'Are you sure you want to logout?',
@@ -78,15 +80,23 @@ export default function ProfileScreen() {
             
             setIsLoggingOut(true);
             console.log('Logout confirmed, starting logout process...');
+            
             try {
+              // Call logout function
               await logout();
               console.log('Logout successful, redirecting to login...');
-              router.replace('/auth/login');
+              
+              // Force redirect to login screen
+              setTimeout(() => {
+                router.replace('/auth/login');
+              }, 100);
             } catch (error) {
               console.error('Logout error:', error);
               // Still redirect even if logout fails
               console.log('Logout failed, but redirecting anyway...');
-              router.replace('/auth/login');
+              setTimeout(() => {
+                router.replace('/auth/login');
+              }, 100);
             } finally {
               setIsLoggingOut(false);
             }
@@ -97,53 +107,58 @@ export default function ProfileScreen() {
   };
 
   if (!isAuthenticated) {
-    console.log('User not authenticated, redirecting to login');
-    router.replace('/auth/login');
+    console.log('User not authenticated, showing login prompt');
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Redirecting to login...</Text>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Please log in to view your profile</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => router.replace('/auth/login')}>
+            <Text style={styles.retryButtonText}>Go to Login</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
-  // Use user data from authentication context
-  const displayProfile = user ? {
-    firstName: user.user?.firstName || 'User',
-    lastName: user.user?.lastName || 'Name',
-    username: user.user?.username || 'user',
-    email: user.user?.email || 'user@example.com',
-    profilePicture: '',
+  if (profileLoading) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.errorText}>Failed to load profile</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => refetchProfile()}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Use real API data from profile query
+  const displayProfile = profile?.user ? {
+    firstName: profile.user.firstName || 'User',
+    lastName: profile.user.lastName || 'Name',
+    username: profile.user.username || 'user',
+    email: profile.user.email || 'user@example.com',
+    profilePicture: profile.user.profilePicture || '',
     stats: {
-      currentLevel: 3,
-      totalPoints: 250,
-      totalChallengesCompleted: 5,
-      totalChallengesJoined: 8,
-      pointsToNextLevel: 50
+      currentLevel: profile.user.stats?.currentLevel || 1,
+      totalPoints: profile.user.stats?.totalPoints || 0,
+      totalChallengesCompleted: profile.user.stats?.totalChallengesCompleted || 0,
+      totalChallengesJoined: profile.user.stats?.totalChallengesJoined || 0,
+      pointsToNextLevel: profile.user.stats?.pointsToNextLevel || 100
     },
-    achievements: [
-      {
-        challengeTitle: 'Energy Saver',
-        pointsEarned: 50,
-        completedAt: new Date().toISOString()
-      },
-      {
-        challengeTitle: 'Waste Warrior',
-        pointsEarned: 75,
-        completedAt: new Date(Date.now() - 86400000).toISOString()
-      }
-    ],
-    badges: [
-      {
-        name: 'First Steps',
-        icon: '🌱',
-        description: 'Completed your first challenge'
-      },
-      {
-        name: 'Energy Expert',
-        icon: '⚡',
-        description: 'Mastered energy saving challenges'
-      }
-    ]
+    achievements: profile.user.achievements || [],
+    badges: profile.user.badges || []
   } : null;
 
   const safeProfile = {
@@ -589,6 +604,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   loginButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: colors.text,
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  retryButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',

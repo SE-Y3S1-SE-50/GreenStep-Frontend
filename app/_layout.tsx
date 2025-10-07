@@ -8,14 +8,9 @@ const queryClient = new QueryClient();
 
 export default function RootLayout() {
   useEffect(() => {
-    // Only start mocks if explicitly enabled
-    if (process.env.EXPO_PUBLIC_USE_MOCKS === 'true') {
-      console.log('Starting mocks...');
-      startMocks();
-    } else {
-      console.log('Using real backend, mocks disabled');
-      stopMocks(); // Ensure mocks are completely disabled
-    }
+    // Always use real backend - mocks are disabled
+    console.log('Using real backend API');
+    stopMocks(); // Ensure mocks are completely disabled
   }, []);
 
   return (
