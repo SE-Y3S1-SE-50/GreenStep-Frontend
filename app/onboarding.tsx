@@ -8,6 +8,7 @@ import {
   FlatList,
   StatusBar,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -71,12 +72,30 @@ export default function OnboardingScreen() {
 
   const handleGetStarted = async () => {
     try {
+      console.log('🚀 Completing onboarding...');
+      
       // Mark onboarding as completed
       await AsyncStorage.setItem('onboarding_completed', 'true');
-      // Navigate to login
-      router.replace('/auth/login');
+      
+      // Verify it was saved
+      const saved = await AsyncStorage.getItem('onboarding_completed');
+      console.log('✅ Onboarding completion saved:', saved);
+      
+      if (saved !== 'true') {
+        console.error('❌ Failed to save onboarding status!');
+        Alert.alert('Error', 'Failed to save onboarding status. Please try again.');
+        return;
+      }
+      
+      // Navigate to login with a small delay to ensure state is updated
+      setTimeout(() => {
+        console.log('➡️ Navigating to login...');
+        router.replace('/auth/login');
+      }, 100);
+      
     } catch (error) {
-      console.error('Error saving onboarding status:', error);
+      console.error('❌ Error saving onboarding status:', error);
+      Alert.alert('Error', 'Something went wrong. Please try again.');
     }
   };
 
@@ -235,7 +254,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   nextButton: {
-    backgroundColor: '#009900',
+    backgroundColor: '#16a34a',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,

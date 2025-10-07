@@ -29,6 +29,14 @@ interface Achievement {
   completedAt: string;
 }
 
+interface UserStats {
+  currentLevel: number;
+  totalPoints: number;
+  totalChallengesCompleted: number;
+  totalChallengesJoined: number;
+  pointsToNextLevel: number;
+}
+
 interface UserProfile {
   success: boolean;
   user: {
@@ -37,13 +45,7 @@ interface UserProfile {
     firstName: string;
     lastName: string;
     email: string;
-    stats: {
-      currentLevel: number;
-      totalPoints: number;
-      totalChallengesCompleted: number;
-      totalChallengesJoined: number;
-      pointsToNextLevel: number;
-    };
+    stats: UserStats;
     badges: Badge[];
     achievements: Achievement[];
   };
@@ -82,8 +84,9 @@ export default function RewardsScreen() {
   } = useQuery<UserProfile>({
     queryKey: ['userProfile'],
     queryFn: getUserProfile,
-    retry: 1, // Reduce retries to fail faster
+    retry: 2,
     enabled: isAuthenticated && !authLoading,
+    staleTime: 30000, // 30 seconds
   });
 
   const { 
@@ -95,8 +98,9 @@ export default function RewardsScreen() {
   } = useQuery({
     queryKey: ['userAchievements'],
     queryFn: getUserAchievements,
-    retry: 1,
+    retry: 2,
     enabled: isAuthenticated && !authLoading,
+    staleTime: 30000,
   });
 
   // Redirect to login if not authenticated
@@ -133,15 +137,12 @@ export default function RewardsScreen() {
 
   // Show error state if API calls failed
   if (isProfileError || isAchievementsError) {
-    console.log('Profile Error:', profileError);
-    console.log('Achievements Error:', achievementsError);
+    const errorMessage = profileError?.message || achievementsError?.message || 'Failed to load rewards';
     
     return (
       <View style={styles.errorContainer}>
         <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
-        <Text style={styles.errorText}>
-          {profileError?.message || achievementsError?.message || 'Failed to load rewards'}
-        </Text>
+        <Text style={styles.errorText}>{errorMessage}</Text>
         <Text style={styles.errorSubtext}>
           Please check your connection and try again
         </Text>
@@ -188,7 +189,7 @@ export default function RewardsScreen() {
 
   // Calculate progress percentage with safe fallback
   const progressPercentage = stats.pointsToNextLevel > 0 
-    ? Math.max(0, Math.min(100, ((stats.totalPoints || 0) / stats.pointsToNextLevel) * 100))
+    ? Math.max(0, Math.min(100, ((100 - stats.pointsToNextLevel) / 100) * 100))
     : 100;
 
   return (
@@ -241,7 +242,7 @@ export default function RewardsScreen() {
               Level {stats.currentLevel}
             </Text>
             <Text style={styles.levelPointsText}>
-              {Math.max(0, stats.pointsToNextLevel - stats.totalPoints)} points to next level
+              {Math.max(0, stats.pointsToNextLevel)} points to next level
             </Text>
           </View>
           <View style={styles.progressBar}>
@@ -327,8 +328,6 @@ export default function RewardsScreen() {
     </ScrollView>
   );
 }
-
-
 
 const styles = StyleSheet.create({
   container: {

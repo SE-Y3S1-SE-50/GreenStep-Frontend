@@ -10,6 +10,7 @@ interface User {
   email: string;
   firstName: string;
   lastName: string;
+  phoneNumber: string;
   role?: string;
 }
 
@@ -130,6 +131,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         username: data.username || username,
         email: data.email || '',
         firstName: data.firstName || '',
+        phoneNumber: data.phoneNumber || '',
         lastName: data.lastName || '',
         role: data.role || 'user',
       };

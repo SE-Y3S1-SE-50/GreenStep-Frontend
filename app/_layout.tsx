@@ -16,7 +16,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const [isLoading, setIsLoading] = useState(true);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const router = useRouter();
@@ -29,10 +29,12 @@ export default function RootLayout() {
   const checkOnboardingStatus = async () => {
     try {
       const completed = await AsyncStorage.getItem('onboarding_completed');
-      console.log('Onboarding status:', completed);
+      console.log('🔍 Onboarding check - Raw value:', completed);
+      console.log('🔍 Onboarding check - Is completed:', completed === 'true');
+      
       setHasCompletedOnboarding(completed === 'true');
     } catch (error) {
-      console.error('Error checking onboarding status:', error);
+      console.error('❌ Error checking onboarding status:', error);
       setHasCompletedOnboarding(false);
     } finally {
       setIsLoading(false);
@@ -40,30 +42,45 @@ export default function RootLayout() {
   };
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading) {
+      console.log('⏳ Still loading onboarding status...');
+      return;
+    }
 
     const inOnboarding = segments[0] === 'onboarding';
     const inAuth = segments[0] === 'auth';
     const inTabs = segments[0] === '(tabs)';
 
-    console.log('Navigation check:', { 
+    console.log('🧭 Navigation check:', { 
       hasCompletedOnboarding, 
       inOnboarding, 
       inAuth, 
       inTabs,
-      segments 
+      segments: segments.join('/'),
+      currentPath: `/${segments.join('/')}`
     });
 
-    // If user hasn't completed onboarding and not on onboarding page
+    // Priority 1: If user hasn't completed onboarding and not on onboarding page
     if (!hasCompletedOnboarding && !inOnboarding) {
-      console.log('Redirecting to onboarding...');
+      console.log('➡️ Redirecting to onboarding (user has not completed it)');
       router.replace('/onboarding');
+      return;
     }
-    // If user completed onboarding but is still on onboarding page
-    else if (hasCompletedOnboarding && inOnboarding) {
-      console.log('Redirecting to login...');
+
+    // Priority 2: If user completed onboarding but is still on onboarding page
+    if (hasCompletedOnboarding && inOnboarding) {
+      console.log('➡️ Redirecting from onboarding to login (already completed)');
       router.replace('/auth/login');
+      return;
     }
+
+    // Priority 3: If user completed onboarding and is in tabs, let auth context handle it
+    if (hasCompletedOnboarding && inTabs) {
+      console.log('✅ User in tabs - let auth context handle authentication');
+      return;
+    }
+
+    console.log('✅ Navigation state is correct, no redirect needed');
   }, [hasCompletedOnboarding, isLoading, segments]);
 
   if (isLoading) {
@@ -75,22 +92,30 @@ export default function RootLayout() {
   }
 
   return (
+    <Stack screenOptions={{ headerShown: false }}>
+      {/* Onboarding Flow */}
+      <Stack.Screen name="onboarding" />
+
+      {/* Auth Flow (Login/Register) */}
+      <Stack.Screen name="auth" />
+
+      {/* Tabs Group (contains protected tabs) */}
+      <Stack.Screen name="(tabs)" />
+      
+      {/* Additional screens */}
+      <Stack.Screen name="challenge/[id]" options={{ title: 'Challenge' }} />
+      <Stack.Screen name="challenge/create" options={{ title: 'Create Challenge' }} />
+      <Stack.Screen name="recommendations" options={{ presentation: 'modal', title: 'Recommendations' }} />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <DashboardProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            {/* Onboarding Flow */}
-            <Stack.Screen name="onboarding" />
-
-            {/* Auth Flow (Login/Register) */}
-            <Stack.Screen name="auth" />
-
-            {/* Tabs Group (contains protected tabs) */}
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="challenge/[id]" options={{ title: 'Challenge' }} />
-            <Stack.Screen name="challenge/create" options={{ title: 'Create Challenge' }} />
-            <Stack.Screen name="recommendations" options={{ presentation: 'modal', title: 'Recommendations' }} />
-          </Stack>
+          <RootLayoutNav />
         </DashboardProvider>
       </AuthProvider>
     </QueryClientProvider>
