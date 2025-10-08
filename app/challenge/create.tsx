@@ -1,4 +1,4 @@
-import { View, Text, TextInput, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { useState } from 'react';
 import { colors } from '../../src/theme/colors';
 import { z } from 'zod';
@@ -35,9 +35,11 @@ export default function CreateChallengeScreen() {
 
   const createChallengeMutation = useMutation({
     mutationFn: async (challengeData: any) => {
+      console.log('Mutation function called with data:', challengeData);
       return await createChallenge(challengeData);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Challenge created successfully!', data);
       // Invalidate and refetch challenges
       qc.invalidateQueries({ queryKey: ['challenges'] });
       qc.invalidateQueries({ queryKey: ['userChallenges'] });
@@ -51,6 +53,11 @@ export default function CreateChallengeScreen() {
     },
     onError: (error: any) => {
       console.error('Error creating challenge:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status
+      });
       Alert.alert(
         'Error', 
         error?.response?.data?.message || 'Failed to create challenge. Please try again.'
@@ -59,6 +66,9 @@ export default function CreateChallengeScreen() {
   });
 
   const onSubmit = () => {
+    console.log('Create challenge button clicked!');
+    console.log('Form data:', form);
+    
     const parsed = schema.safeParse({
       ...form,
       target: Number(form.target),
@@ -67,7 +77,10 @@ export default function CreateChallengeScreen() {
       imageUrl: form.imageUrl || undefined,
     });
     
+    console.log('Parsed data:', parsed);
+    
     if (!parsed.success) {
+      console.log('Validation errors:', parsed.error.errors);
       Alert.alert(
         'Invalid form', 
         parsed.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('\n')
@@ -75,15 +88,27 @@ export default function CreateChallengeScreen() {
       return;
     }
     
+    console.log('Starting challenge creation...');
     createChallengeMutation.mutate(parsed.data);
   };
 
   const onChange = (k: string, v: string) => setForm((s) => ({ ...s, [k]: v }));
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16 }}>
-      <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>Create Challenge</Text>
-      <View style={{ height: 12 }} />
+    <View style={{ flex: 1, backgroundColor: colors.surface }}>
+      {/* Header with back button */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Text style={styles.backButtonText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Challenge</Text>
+        <View style={{ width: 60 }} />
+      </View>
+      
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
       <Field label="Title">
         <TextInput value={form.title} onChangeText={(t) => onChange('title', t)} style={inputStyle} placeholder="Title" />
       </Field>
@@ -130,8 +155,7 @@ export default function CreateChallengeScreen() {
         </Row>
       </Field>
       <View style={{ height: 16 }} />
-      <Pressable 
-        accessibilityRole="button" 
+      <TouchableOpacity 
         onPress={onSubmit} 
         disabled={createChallengeMutation.isPending}
         style={{ 
@@ -144,8 +168,9 @@ export default function CreateChallengeScreen() {
         <Text style={{ color: 'white', fontWeight: '800' }}>
           {createChallengeMutation.isPending ? 'Creating...' : 'Create'}
         </Text>
-      </Pressable>
-    </ScrollView>
+      </TouchableOpacity>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -178,5 +203,34 @@ const inputStyle = {
   padding: 12,
   color: colors.text,
 } as const;
+
+const styles = {
+  header: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  backButtonText: {
+    color: colors.text,
+    fontWeight: '600' as const,
+    fontSize: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '800' as const,
+    color: colors.text,
+  },
+};
 
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -12,44 +12,22 @@ import {
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { getChallenges, joinChallenge } from '../../src/api/client';
+import { getChallenges, joinChallenge, getUserProfile, type Challenge } from '../../src/api/client';
 import { colors } from '../../src/theme/colors';
-import { Ionicons } from '@expo/vector-icons';
-
-interface Challenge {
-  _id: string;
-  title: string;
-  description: string;
-  category: string;
-  difficulty: string;
-  points: number;
-  duration: number;
-  target: number;
-  unit: string;
-  imageUrl?: string;
-  participants: Array<{
-    user: {
-      _id: string;
-      username: string;
-    };
-    progress: number;
-  }>;
-  createdAt: string;
-  createdBy: {
-    _id: string;
-    username: string;
-  };
-}
 
 // Simple Challenge Card Component
 function SimpleChallengeCard({ 
   challenge, 
   onPress, 
-  onJoin 
+  onJoin,
+  hasJoined,
+  isJoining
 }: { 
   challenge: Challenge; 
   onPress: () => void; 
-  onJoin: () => void; 
+  onJoin: () => void;
+  hasJoined: boolean;
+  isJoining: boolean;
 }) {
   const endDate = new Date(Date.now() + challenge.duration * 24 * 60 * 60 * 1000);
   const daysLeft = Math.ceil((endDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
@@ -68,22 +46,18 @@ function SimpleChallengeCard({
       </Text>
       
       <View style={styles.cardInfo}>
-        <View style={styles.infoRow}>
-          <Ionicons name="folder-outline" size={16} color="#6b7280" />
-          <Text style={styles.infoText}>{challenge.category}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="flag-outline" size={16} color="#6b7280" />
-          <Text style={styles.infoText}>{challenge.target} {challenge.unit}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="time-outline" size={16} color="#6b7280" />
-          <Text style={styles.infoText}>{challenge.duration} days</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="people-outline" size={16} color="#6b7280" />
-          <Text style={styles.infoText}>{challenge.participants.length} joined</Text>
-        </View>
+        <Text style={styles.infoText}>
+          Category: {challenge.category}
+        </Text>
+        <Text style={styles.infoText}>
+          Target: {challenge.target} {challenge.unit}
+        </Text>
+        <Text style={styles.infoText}>
+          Duration: {challenge.duration} days
+        </Text>
+        <Text style={styles.infoText}>
+          Participants: {challenge.participants.length}
+        </Text>
       </View>
       
       <View style={styles.cardActions}>
@@ -91,9 +65,23 @@ function SimpleChallengeCard({
           <Text style={styles.viewButtonText}>View Details</Text>
         </Pressable>
         
-        <Pressable style={[styles.button, styles.joinButton]} onPress={onJoin}>
-          <Text style={styles.joinButtonText}>Join Challenge</Text>
-        </Pressable>
+        {hasJoined ? (
+          <View style={[styles.button, styles.joinedButton]}>
+            <Text style={styles.joinedButtonText}>✓ Joined</Text>
+          </View>
+        ) : (
+          <Pressable 
+            style={[styles.button, styles.joinButton, isJoining && styles.disabledButton]} 
+            onPress={onJoin}
+            disabled={isJoining}
+          >
+            {isJoining ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.joinButtonText}>Join Challenge</Text>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -103,15 +91,29 @@ export default function ChallengesScreen() {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // Get user profile to check which challenges they've joined
+  const { data: userProfile } = useQuery({
+    queryKey: ['userProfile'],
+    queryFn: getUserProfile,
+    retry: 2
+  });
+
+  // Set userId when userProfile is loaded
+  useEffect(() => {
+    if (userProfile?.user?.id) {
+      setUserId(userProfile.user.id);
+    }
+  }, [userProfile]);
 
   const { 
     data: challenges = [], 
     isLoading, 
     refetch, 
-    isRefetching,
-    error 
+    isRefetching 
   } = useQuery({
     queryKey: ['challenges'],
     queryFn: getChallenges,
@@ -129,15 +131,38 @@ export default function ChallengesScreen() {
     },
     onError: (error: any) => {
       console.error('Join challenge error:', error);
-      Alert.alert(
-        'Error', 
-        error?.response?.data?.message || 'Failed to join challenge. Please try again.'
-      );
+      
+      // Check if it's "already joined" error
+      if (error?.response?.status === 400 && 
+          error?.response?.data?.message?.includes('Already joined')) {
+        Alert.alert(
+          'Already Joined', 
+          'You have already joined this challenge. Keep up the great work!'
+        );
+        // Refresh to update UI
+        queryClient.invalidateQueries({ queryKey: ['challenges'] });
+      } else {
+        Alert.alert(
+          'Error', 
+          error?.response?.data?.message || 'Failed to join challenge. Please try again.'
+        );
+      }
     }
   });
 
+  // Check if user has joined a specific challenge
+  const hasUserJoined = (challenge: Challenge): boolean => {
+    if (!userId) return false;
+    
+    return challenge.participants.some(
+      participant => 
+        participant.user._id === userId || 
+        participant.user._id.toString() === userId.toString()
+    );
+  };
+
   // Filter challenges
-  const filteredChallenges = challenges.filter((challenge: Challenge) => {
+  const filteredChallenges = challenges.filter((challenge) => {
     const matchesSearch = challenge.title.toLowerCase().includes(search.toLowerCase()) ||
                          challenge.description.toLowerCase().includes(search.toLowerCase());
     
@@ -155,10 +180,12 @@ export default function ChallengesScreen() {
     <SimpleChallengeCard
       challenge={item}
       onPress={() => router.push({ 
-        pathname: '/challenge/[id]' as any, 
+        pathname: '/challenge/[id]', 
         params: { id: item._id } 
       })}
       onJoin={() => handleJoin(item._id)}
+      hasJoined={hasUserJoined(item)}
+      isJoining={joinMutation.isPending && joinMutation.variables === item._id}
     />
   );
 
@@ -171,18 +198,6 @@ export default function ChallengesScreen() {
     );
   }
 
-  if (error) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
-        <Text style={styles.errorText}>Failed to load challenges</Text>
-        <Pressable style={styles.retryButton} onPress={() => refetch()}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </Pressable>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -190,15 +205,12 @@ export default function ChallengesScreen() {
         <Text style={styles.title}>GreenStep Challenges</Text>
         
         {/* Search */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search-outline" size={20} color="#6b7280" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search challenges..."
-            value={search}
-            onChangeText={setSearch}
-          />
-        </View>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search challenges..."
+          value={search}
+          onChangeText={setSearch}
+        />
         
         {/* Filters */}
         <View style={styles.filtersContainer}>
@@ -265,7 +277,6 @@ export default function ChallengesScreen() {
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Ionicons name="leaf-outline" size={64} color="#d1d5db" />
             <Text style={styles.emptyText}>No challenges found</Text>
             <Text style={styles.emptySubtext}>
               {search || selectedCategory || selectedDifficulty 
@@ -279,7 +290,7 @@ export default function ChallengesScreen() {
       {/* Create Challenge Button */}
       <Link href="/challenge/create" asChild>
         <Pressable style={styles.fab}>
-          <Ionicons name="add" size={24} color="white" />
+          <Text style={styles.fabText}>+</Text>
         </Pressable>
       </Link>
     </View>
@@ -295,28 +306,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
     color: colors.text,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#ef4444',
-    marginTop: 12,
-  },
-  retryButton: {
-    marginTop: 16,
-    backgroundColor: colors.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: 'white',
-    fontWeight: '600',
   },
   header: {
     backgroundColor: 'white',
@@ -330,23 +324,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: 16,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  searchInput: {
     backgroundColor: '#f8f9fa',
     borderWidth: 1,
     borderColor: '#e5e7eb',
     borderRadius: 8,
-    marginBottom: 16,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
     padding: 12,
     fontSize: 16,
+    marginBottom: 16,
   },
   filtersContainer: {
     gap: 8,
@@ -428,17 +413,11 @@ const styles = StyleSheet.create({
   },
   cardInfo: {
     marginBottom: 16,
-    gap: 8,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    gap: 4,
   },
   infoText: {
     fontSize: 12,
     color: '#6b7280',
-    textTransform: 'capitalize',
   },
   cardActions: {
     flexDirection: 'row',
@@ -459,6 +438,14 @@ const styles = StyleSheet.create({
   joinButton: {
     backgroundColor: colors.primary,
   },
+  joinedButton: {
+    backgroundColor: '#d1fae5',
+    borderWidth: 1,
+    borderColor: '#10b981',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
   viewButtonText: {
     fontSize: 14,
     fontWeight: '600',
@@ -468,6 +455,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: 'white',
+  },
+  joinedButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#10b981',
   },
   emptyContainer: {
     flex: 1,
@@ -479,7 +471,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
-    marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
@@ -502,5 +493,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  fabText: {
+    fontSize: 24,
+    color: 'white',
+    fontWeight: 'bold',
   },
 });

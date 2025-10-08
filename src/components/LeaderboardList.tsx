@@ -12,6 +12,8 @@ export default function LeaderboardList({ data }: Props) {
       renderItem={({ item }) => <Row row={item} />}
       ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       showsVerticalScrollIndicator={false}
+      scrollEnabled={false} // ADD THIS - Disable scrolling
+      nestedScrollEnabled={false} // ADD THIS
       contentContainerStyle={{ paddingVertical: 8 }}
       accessibilityLabel="Leaderboard"
     />
@@ -44,5 +46,3 @@ function Row({ row }: { row: LeaderboardRow }) {
     </View>
   );
 }
-
-
