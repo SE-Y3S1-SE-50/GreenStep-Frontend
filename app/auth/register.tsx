@@ -103,7 +103,7 @@ export default function RegisterScreen() {
                   placeholder="Enter your first name"
                   value={firstName}
                   onChangeText={setFirstName}
-                  editable={loading}
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -117,7 +117,7 @@ export default function RegisterScreen() {
                   placeholder="Enter your last name"
                   value={lastName}
                   onChangeText={setLastName}
-                  editable={loading}
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -148,7 +148,7 @@ export default function RegisterScreen() {
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
-                  editable={loading}
+                  editable={!loading}
                 />
               </View>
             </View>
