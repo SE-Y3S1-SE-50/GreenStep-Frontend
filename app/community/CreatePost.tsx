@@ -1,15 +1,37 @@
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Button, TextInput, View } from "react-native";
+import { Alert, Button, TextInput, View } from "react-native";
+import { BASE_URL } from "../../constants/config";
 
 const CreatePost = () => {
   const [text, setText] = useState("");
   const router = useRouter();
 
-  const handlePost = () => {
-    console.log("Posted:", text);
-    // later we’ll send this to backend
-    router.back();
+  const handlePost = async () => {
+    if (!text.trim()) {
+      Alert.alert("Please write something!");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${BASE_URL}/api/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user: "You", // later replace with logged-in user
+          text,
+        }),
+      });
+
+      if (res.ok) {
+        console.log("Post created successfully");
+        router.back();
+      } else {
+        Alert.alert("Error creating post");
+      }
+    } catch (error) {
+      console.error("Error posting:", error);
+    }
   };
 
   return (

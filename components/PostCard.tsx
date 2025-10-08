@@ -1,4 +1,3 @@
-// ...existing code...
 import React from "react";
 import { Image, View } from "react-native";
 import { Text } from "react-native-paper";
@@ -12,7 +11,9 @@ const PostCard = ({ post }: { post?: any }) => {
       : post.image; // local require(...) (number) or already a valid source
 
   return (
+    
     <View
+    
       style={{
         backgroundColor: "white",
         margin: 10,
@@ -33,8 +34,9 @@ const PostCard = ({ post }: { post?: any }) => {
         />
       )}
     </View>
+    
   );
 };
 
+
 export default PostCard;
-// ...existing code...

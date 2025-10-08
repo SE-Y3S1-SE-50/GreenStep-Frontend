@@ -1,9 +1,11 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import CommunityFeed from '../community/CommunityFeed';
 
 export default function CommunityScreen() {
   return (
     <View style={styles.container}>
-      <Text>Community Screen</Text>
+      <CommunityFeed/>
     </View>
   );
 }

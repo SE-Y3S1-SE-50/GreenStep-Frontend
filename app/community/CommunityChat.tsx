@@ -1,27 +1,46 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button, FlatList, TextInput, View } from "react-native";
 import { Text } from "react-native-paper";
+import io from "socket.io-client";
+import { BASE_URL } from "../../constants/config";
+
+const socket = io(BASE_URL);
 
 const CommunityChat = () => {
-  const [messages, setMessages] = useState([
-    { id: "1", user: "Mineth", message: "Hello everyone!" },
-    { id: "2", user: "Senura", message: "Hi! Excited to start tree planting 🌳" },
-  ]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [input, setInput] = useState("");
+
+  useEffect(() => {
+    // Fetch existing messages
+    const fetchMessages = async () => {
+      const res = await fetch(`${BASE_URL}/api/chat`);
+      const data = await res.json();
+      setMessages(data);
+    };
+    fetchMessages();
+
+    // Listen for new messages
+    socket.on("receiveMessage", (newMessage) => {
+      setMessages((prev) => [...prev, newMessage]);
+    });
+
+    return () => {
+      socket.off("receiveMessage");
+    };
+  }, []);
 
   const sendMessage = () => {
     if (input.trim()) {
-      const newMsg = { id: Date.now().toString(), user: "You", message: input };
-    setMessages([...messages, newMsg]);
-    setInput("");
-  }
-};
+      socket.emit("sendMessage", { user: "You", message: input });
+      setInput("");
+    }
+  };
 
   return (
     <View style={{ flex: 1, padding: 10 }}>
       <FlatList
         data={messages}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item._id || item.createdAt}
         renderItem={({ item }) => (
           <View
             style={{
