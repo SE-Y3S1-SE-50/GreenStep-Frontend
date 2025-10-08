@@ -13,6 +13,7 @@ import {
   SafeAreaView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import axios from 'axios';
 
 const { width: screenWidth } = Dimensions.get('window');
 const SIDEBAR_WIDTH = 320;
@@ -45,20 +46,31 @@ const EducationTab: React.FC = () => {
   const [chatbotOpen, setChatbotOpen] = useState<boolean>(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
   const [selectedContent, setSelectedContent] = useState<string>('what-is-reforestation');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { 
-      type: 'bot', 
-      message: 'Hello! I\'m your **reforestation assistant**. I\'m here to guide you through environmental conservation and answer any questions you have about trees, planting, and sustainability. Let\'s explore together!',
-      timestamp: Date.now()
-    }
-  ]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState<string>('');
   const [typing, setTyping] = useState<boolean>(false);
+  const [sessionId, setSessionId] = useState<string>('');
+  const chatScrollRef = useRef<ScrollView>(null);
 
   // Animation references
   const slideAnim = useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const overlayAnim = useRef(new Animated.Value(0)).current;
   const chatScaleAnim = useRef(new Animated.Value(0)).current;
+  const chatButtonTranslateY = useRef(new Animated.Value(0)).current;
+
+  // Initialize session ID
+  useEffect(() => {
+    const generateSessionId = () => {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    };
+
+    const newSessionId = generateSessionId();
+    setSessionId(newSessionId);
+  }, []);
 
   const navigationSections: NavigationSection[] = [
     {
@@ -1054,471 +1066,10 @@ Tree Planting Events:
 
 Citizen Science Projects:
 • Forest monitoring and data collection
-• Tree health assessments and disease tracking
-• Biodiversity surveys and species inventories
-• Climate change impact documentation
-• Water quality monitoring in forested watersheds
-• Phenology observations and seasonal tracking
+• Tree health assessments and disease tracking`
+    }}
 
-Nursery and Propagation:
-• Seed collection from native parent trees
-• Greenhouse management and seedling care
-• Potting, watering, and transplanting activities
-• Native plant society events and plant sales
-• School garden and outdoor education programs
-• Botanical garden conservation initiatives
-
-Advocacy and Education:
-• Environmental education and outreach programs
-• Policy advocacy and campaign support
-• Fundraising events and donor stewardship
-• Social media content creation and management
-• Photography and documentation projects
-• Translation and multilingual content development
-
-Skills-Based Volunteering:
-• GIS mapping and spatial analysis
-• Website development and maintenance
-• Graphic design for educational materials
-• Grant writing and funding applications
-• Project management and coordination
-• Financial management and bookkeeping
-
-Finding Opportunities:
-• Search online volunteer databases
-• Contact local environmental organizations
-• Check with government forest agencies
-• Connect with university research programs
-• Join professional forestry associations
-• Follow social media for event announcements
-
-Preparing to Volunteer:
-• Dress appropriately for outdoor work
-• Bring water, snacks, and sun protection
-• Learn basic plant identification skills
-• Understand safety protocols and procedures
-• Arrive on time and ready to learn
-• Ask questions and engage with organizers
-
-Benefits of Volunteering:
-• Hands-on learning and skill development
-• Networking with like-minded individuals
-• Contributing to meaningful environmental work
-• Building resume and gaining experience
-• Personal satisfaction and sense of purpose
-• Connecting with nature and outdoors`
-    },
-    'citizen-science': {
-      title: 'Citizen Science Projects',
-      content: `Contribute to forest research and conservation through citizen science initiatives.
-
-Data Collection Projects:
-• iNaturalist - biodiversity observations and species mapping
-• eBird - bird surveys in forest habitats
-• Journey North - tracking seasonal changes and migration
-• Forest Watch - monitoring forest health and disturbances
-• Project BudBurst - phenology observations
-• Globe Observer - land cover assessment
-
-Tree Monitoring:
-• TreeMap - urban tree inventory and condition
-• Forest Health Monitoring - pest and disease tracking
-• ClimateWatch - climate change impact documentation
-• TreeRadar - forest structure measurement using smartphones
-• Canopy Cover Assessment - measuring forest density
-• Growth Rate Studies - long-term tree measurement
-
-Technology-Enhanced Projects:
-• Smartphone apps for data collection
-• GPS mapping of forest features
-• Digital photography for documentation
-• Drone surveys and aerial imagery
-• Sensor networks for environmental monitoring
-• Online data entry and quality control
-
-Research Contributions:
-• Large-scale data collection across regions
-• Long-term monitoring and trend analysis
-• Validation of remote sensing data
-• Baseline establishment for restoration projects
-• Climate change impact assessment
-• Biodiversity pattern documentation
-
-Training and Support:
-• Online tutorials and field guides
-• Expert verification of observations
-• Community forums and discussion groups
-• Regular feedback on contributions
-• Recognition and achievement systems
-• Scientific publication acknowledgments
-
-Project Benefits:
-• Democratize scientific research participation
-• Generate large datasets for analysis
-• Engage public in environmental monitoring
-• Build scientific literacy and awareness
-• Support conservation decision-making
-• Create lasting connections to nature
-
-Getting Started:
-• Choose projects matching your interests and location
-• Download required apps and create accounts
-• Complete training modules and tutorials
-• Start with simple observations and measurements
-• Connect with local coordinators and groups
-• Share experiences and learn from others`
-    },
-    'gamified-learning': {
-      title: 'Gamified Learning',
-      content: `Make forest education fun and engaging through game-based learning approaches.
-
-Educational Games:
-• Forest ecosystem simulation games
-• Tree identification matching games
-• Carbon cycle interactive puzzles
-• Virtual forest management scenarios
-• Species conservation strategy games
-• Climate change adaptation challenges
-
-Mobile Apps:
-• PlantNet - AI-powered plant identification
-• Seek by iNaturalist - camera-based species ID
-• Forest Adventure - educational exploration game
-• Tree Story - interactive forest growth simulation
-• EcoChain - ecosystem relationship puzzles
-• Carbon Footprint Calculator - personal impact games
-
-Classroom Activities:
-• Forest role-playing scenarios
-• Biodiversity board games and card games
-• Hands-on ecosystem model building
-• Scavenger hunts for forest features
-• Team competitions and challenges
-• Interactive presentations and demos
-
-Virtual Reality Experiences:
-• Immersive forest ecosystem exploration
-• Time-lapse forest succession visualization
-• Climate change impact simulations
-• Restoration project virtual field trips
-• Microscopic forest life examination
-• Historical forest landscape recreation
-
-Achievement Systems:
-• Badges for knowledge milestones
-• Points for participation and accuracy
-• Leaderboards for friendly competition
-• Certificates for course completion
-• Physical rewards for real-world actions
-• Social recognition and sharing
-
-Learning Outcomes:
-• Increased engagement and motivation
-• Better retention of complex concepts
-• Development of problem-solving skills
-• Enhanced collaboration and teamwork
-• Real-world application of knowledge
-• Positive attitudes toward conservation
-
-Design Principles:
-• Clear objectives and meaningful challenges
-• Progressive difficulty and skill building
-• Immediate feedback and recognition
-• Social interaction and collaboration
-• Connection to real-world applications
-• Accessibility for diverse learners`
-    },
-    'ebooks-research': {
-      title: 'eBooks & Research Papers',
-      content: `Access comprehensive resources for in-depth forest knowledge and research.
-
-Essential eBooks:
-• "The Hidden Life of Trees" by Peter Wohlleben
-• "Forest Restoration in Human-Dominated Landscapes" 
-• "Reforestation Challenges and Solutions Handbook"
-• "Community-Based Forest Management Guide"
-• "Climate Change and Forest Adaptation Strategies"
-• "Sustainable Forestry Practices Manual"
-
-Academic Journals:
-• Forest Ecology and Management
-• Restoration Ecology
-• Journal of Forestry
-• Forest Policy and Economics
-• Ecological Applications
-• Conservation Biology
-
-Research Databases:
-• Google Scholar - free academic search
-• ResearchGate - researcher networking
-• Academia.edu - academic paper sharing
-• JSTOR - academic journal archive
-• SpringerLink - scientific publications
-• Wiley Online Library - research articles
-
-Government Publications:
-• FAO State of the World's Forests reports
-• USDA Forest Service research publications
-• IPCC reports on land use and climate
-• National forest inventory reports
-• Climate change assessment reports
-• Biodiversity strategy and action plans
-
-Topic Areas:
-• Forest ecology and ecosystem dynamics
-• Restoration techniques and methodologies
-• Community forestry and social aspects
-• Climate change impacts and adaptation
-• Forest economics and policy analysis
-• Technology applications in forestry
-
-Open Access Resources:
-• PLOS ONE environmental research
-• Frontiers in Forests and Global Change
-• Nature Conservation open access papers
-• BioMed Central ecology journals
-• Directory of Open Access Journals
-• ArXiv preprints in relevant fields
-
-Reading Strategies:
-• Start with abstracts and conclusions
-• Focus on methodology and results sections
-• Look for recent meta-analyses and reviews
-• Check citation patterns for key papers
-• Follow specific authors and institutions
-• Set up alerts for new publications
-
-Research Skills:
-• Develop critical reading abilities
-• Learn to evaluate source credibility
-• Practice synthesizing information
-• Understand statistical methods
-• Connect theory to practical applications
-• Stay current with field developments`
-    },
-    'external-organizations': {
-      title: 'External Organizations & Links',
-      content: `Connect with leading organizations working on reforestation and forest conservation.
-
-International Organizations:
-• Food and Agriculture Organization (FAO) - forestry.fao.org
-• International Union for Conservation of Nature (IUCN) - iucn.org
-• World Wildlife Fund (WWF) - worldwildlife.org
-• Conservation International - conservation.org
-• World Resources Institute - wri.org
-• Rainforest Alliance - rainforest-alliance.org
-
-Research Institutions:
-• Center for International Forestry Research (CIFOR) - cifor.org
-• World Forest Institute - worldforestinstitute.org
-• Smithsonian Environmental Research Center - serc.si.edu
-• International Institute for Tropical Agriculture - iita.org
-• Tropical Forest Research Institute - tfri.res.in
-• Forest Research Institute Malaysia - frim.gov.my
-
-Government Agencies:
-• USDA Forest Service - fs.usda.gov
-• Natural Resources Canada - nrcan.gc.ca
-• UK Forestry Commission - gov.uk/forestry-commission
-• Australian Department of Agriculture - agriculture.gov.au
-• Indian Forest Service - forest.gov.in
-• Brazilian Forest Service - florestal.gov.br
-
-NGOs and Nonprofits:
-• Trees for the Future - trees.org
-• One Tree Planted - onetreeplanted.org
-• The Nature Conservancy - nature.org
-• Arbor Day Foundation - arborday.org
-• Eden Reforestation Projects - edenprojects.org
-• Plant-for-the-Planet - plant-for-the-planet.org
-
-Professional Associations:
-• Society of American Foresters - eforester.org
-• International Association of Forest Research Organizations - iufro.org
-• Commonwealth Forestry Association - cfa-international.org
-• Society for Ecological Restoration - ser.org
-• Association of Forest Service Employees - afseee.org
-• International Union of Forest Research Organizations
-
-Technology Partners:
-• Global Forest Watch - globalforestwatch.org
-• NASA Earth Observatory - earthobservatory.nasa.gov
-• Google Earth Engine - earthengine.google.com
-• Forest Trends - forest-trends.org
-• Climate Policy Initiative - climatepolicyinitiative.org
-• World Bank Forest Action Plan - worldbank.org
-
-Funding Organizations:
-• Global Environment Facility - thegef.org
-• Green Climate Fund - greenclimate.fund
-• Forest Investment Program - climateinvestmentfunds.org
-• MacArthur Foundation - macfound.org
-• Ford Foundation - fordfoundation.org
-• Bill & Melinda Gates Foundation - gatesfoundation.org
-
-Networking Benefits:
-• Access to latest research and best practices
-• Collaboration opportunities and partnerships
-• Funding and grant opportunities
-• Technical assistance and capacity building
-• Policy advocacy and influence
-• Professional development and training`
-    },
-    'government-guidelines': {
-      title: 'Government Guidelines',
-      content: `Understanding policy frameworks and regulations for forest restoration and management.
-
-National Forest Policies:
-• National Forest Strategy and action plans
-• Biodiversity conservation strategies
-• Climate change adaptation frameworks
-• Sustainable development goal alignments
-• Land use planning and zoning regulations
-• Environmental protection laws
-
-Reforestation Guidelines:
-• Species selection and approval processes
-• Site preparation and planting standards
-• Monitoring and reporting requirements
-• Survival rate and success criteria
-• Maintenance and long-term care protocols
-• Native species conservation priorities
-
-Permitting and Approvals:
-• Environmental impact assessment requirements
-• Land use change permits and approvals
-• Water use permits for irrigation
-• Pesticide use restrictions and guidelines
-• Construction and access road regulations
-• Protected area and buffer zone rules
-
-Funding Programs:
-• Government reforestation grants and subsidies
-• Tax incentives for forest conservation
-• Payment for ecosystem services schemes
-• Carbon credit programs and markets
-• International development funding
-• Private sector partnership opportunities
-
-Compliance Requirements:
-• Regular monitoring and progress reporting
-• Financial auditing and accountability
-• Environmental safeguards and protections
-• Social impact assessments and consultations
-• Labor standards and safety requirements
-• Procurement and contracting regulations
-
-Indigenous Rights:
-• Free, prior, and informed consent protocols
-• Traditional territory recognition
-• Indigenous knowledge integration
-• Benefit-sharing agreements
-• Cultural heritage protection
-• Land tenure and use rights
-
-International Frameworks:
-• UN Framework Convention on Climate Change
-• Convention on Biological Diversity
-• UN Sustainable Development Goals
-• REDD+ (Reducing Emissions from Deforestation)
-• Paris Agreement forest commitments
-• International tropical timber agreements
-
-Implementation Support:
-• Technical assistance programs
-• Capacity building and training
-• Research and development support
-• Technology transfer initiatives
-• Public-private partnerships
-• Community engagement guidelines
-
-Staying Updated:
-• Subscribe to government newsletters
-• Attend policy briefings and workshops
-• Join stakeholder consultation processes
-• Monitor regulatory changes and updates
-• Connect with government liaisons
-• Participate in policy development`
-    },
-    'community-forums': {
-      title: 'Community Forums / Discussion Boards',
-      content: `Connect with fellow forest enthusiasts, practitioners, and experts in online communities.
-
-Professional Forums:
-• Forest Connect - global forestry networking platform
-• Arborist Exchange - tree care and management discussions
-• Restoration Roundtable - ecological restoration community
-• Climate CoLab - collaborative climate solutions
-• ResearchGate - academic researcher networking
-• LinkedIn Forestry Groups - professional networking
-
-General Interest Communities:
-• Reddit r/forestry - general forestry discussions
-• Reddit r/marijuanaenthusiasts - actual tree enthusiasts
-• TreeBuzz - arborist and tree care community
-• Permies.com - permaculture and sustainable living
-• Gardening forums with native plant sections
-• Facebook groups for local forest communities
-
-Regional Networks:
-• State and provincial forestry associations
-• Local native plant societies
-• Watershed conservation groups
-• Land trust and conservation organizations
-• Indigenous forestry networks
-• Urban forestry municipal groups
-
-Specialized Topics:
-• Forest pathology and disease management
-• Forest economics and policy analysis
-• Wildlife habitat management
-• Fire management and prevention
-• Sustainable harvesting practices
-• Forest carbon and climate change
-
-Educational Communities:
-• University extension forums
-• Online course discussion boards
-• Webinar follow-up discussions
-• Student and educator networks
-• Citizen science project communities
-• Volunteer coordinator platforms
-
-Discussion Guidelines:
-• Be respectful and constructive in conversations
-• Share experiences and practical knowledge
-• Ask specific questions for better responses
-• Provide context for location and conditions
-• Include photos when relevant and helpful
-• Follow community rules and moderation policies
-
-Benefits of Participation:
-• Learn from diverse experiences and perspectives
-• Get answers to specific technical questions
-• Stay updated on latest developments
-• Build professional networks and relationships
-• Share successes and learn from failures
-• Find collaboration and partnership opportunities
-
-Contributing Value:
-• Share successful techniques and results
-• Provide helpful resources and links
-• Mentor newcomers to the field
-• Offer constructive feedback and advice
-• Document and share case studies
-• Facilitate connections between members
-
-Platform Features:
-• Search previous discussions and archives
-• Subscribe to topics of interest
-• Private messaging for direct connections
-• File sharing for documents and images
-• Event calendars and announcements
-• Mobile apps for on-the-go access`
-    }
-  };
-
-  // Animation effects
+  // Animations
   useEffect(() => {
     if (sidebarOpen) {
       Animated.parallel([
@@ -1551,19 +1102,42 @@ Platform Features:
 
   useEffect(() => {
     if (chatbotOpen) {
-      Animated.timing(chatScaleAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(chatScaleAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(chatButtonTranslateY, {
+          toValue: 100,
+          duration: 300,
+          useNativeDriver: true,
+        })
+      ]).start();
     } else {
-      Animated.timing(chatScaleAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      Animated.parallel([
+        Animated.timing(chatScaleAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(chatButtonTranslateY, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        })
+      ]).start();
     }
   }, [chatbotOpen]);
+
+  // Auto-scroll chat messages
+  useEffect(() => {
+    if (chatScrollRef.current && chatMessages.length > 0) {
+      setTimeout(() => {
+        chatScrollRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [chatMessages]);
 
   const toggleSection = (sectionId: string): void => {
     setExpandedSections(prev => ({
@@ -1585,14 +1159,8 @@ Platform Features:
     setSidebarOpen(false);
   };
 
-  const handleMainContentPress = () => {
-    if (sidebarOpen) {
-      setSidebarOpen(false);
-    }
-  };
-
-  const sendMessage = (): void => {
-    if (!chatInput.trim()) return;
+  const sendMessage = async (): Promise<void> => {
+    if (!chatInput.trim() || !sessionId) return;
     
     const userMessage: ChatMessage = {
       type: 'user',
@@ -1601,18 +1169,47 @@ Platform Features:
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const currentMessage = chatInput.trim();
     setChatInput('');
     setTyping(true);
 
-    setTimeout(() => {
+    try {
+      const response = await axios.post(
+        "https://nivakaran-max.hf.space/ask",
+        {
+          session_id: sessionId,
+          question: currentMessage
+        },
+        {
+          headers: {
+            "Content-Type": "application/json"
+          },
+          timeout: 20000
+        }
+      );
+
+      const answer = response.data?.answer || "I apologize, but I couldn't process your request. Please try again.";
+      
       const botMessage: ChatMessage = {
         type: 'bot',
-        message: 'Thank you for your question! This is a **demo response**. In a real implementation, this would connect to an AI service to provide detailed answers about **reforestation topics**.',
+        message: answer,
         timestamp: Date.now()
       };
+      
       setChatMessages(prev => [...prev, botMessage]);
       setTyping(false);
-    }, 1500);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      
+      const errorMessage: ChatMessage = {
+        type: 'bot',
+        message: "I'm having trouble connecting right now. Please try again in a moment.",
+        timestamp: Date.now()
+      };
+      
+      setChatMessages(prev => [...prev, errorMessage]);
+      setTyping(false);
+    }
   };
 
   const parseMessageToJSX = (text: string) => {
@@ -1670,7 +1267,7 @@ Platform Features:
     <View style={{ flex: 1, backgroundColor: '#f9fafb' }}>
       <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
       
-      {/* Overlay */}
+      {/* Overlay for Sidebar */}
       {sidebarOpen && (
         <Animated.View
           style={{
@@ -1750,7 +1347,6 @@ Platform Features:
             </TouchableOpacity>
           </View>
         </View>
-
 
         {/* Sidebar Content */}
         <ScrollView 
@@ -1852,341 +1448,392 @@ Platform Features:
       )}
 
       {/* Main Content */}
-<View style={{ flex: 1 }}>
-  {/* Header */}
-  <View
-    style={{
-      backgroundColor: '#ffffff',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 4,
-      elevation: 3,
-      borderBottomWidth: 1,
-      borderBottomColor: '#e5e7eb',
-      flexDirection: 'row',
-      alignItems: 'center'
-    }}
-  >
-    <TouchableOpacity
-      onPress={toggleSidebar}
-      style={{
-        padding: 12,
-        marginRight: 16,
-        borderRadius: 8,
-        backgroundColor: '#f9fafb'
-      }}
-    >
-      <Ionicons name="menu" size={24} color="#374151" />
-    </TouchableOpacity>
-    <Text
-      style={{
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: '#166534',
-        flex: 1,
-        letterSpacing: 0.5
-      }}
-    >
-      Green Step Education
-    </Text>
-  </View>
-
-  {/* Scrollable Content */}
-  <ScrollView
-    style={{ flex: 1 }}
-    contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
-    showsVerticalScrollIndicator={false}
-  >
-    {contentData[selectedContent] ? (
       <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            fontSize: 28,
-            fontWeight: 'bold',
-            color: '#1f2937',
-            marginBottom: 24,
-            lineHeight: 36,
-            paddingHorizontal: 4
-          }}
-        >
-          {contentData[selectedContent].title}
-        </Text>
+        {/* Header */}
         <View
           style={{
             backgroundColor: '#ffffff',
-            borderRadius: 16,
-            padding: 24,
-            marginHorizontal: 4,
+            paddingHorizontal: 20,
+            paddingVertical: 16,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.12,
-            shadowRadius: 6,
-            elevation: 4,
-            borderWidth: 1,
-            borderColor: '#f1f5f9'
-          }}
-        >
-          <Text
-            style={{
-              fontSize: 16,
-              color: '#374151',
-              lineHeight: 26,
-              letterSpacing: 0.3
-            }}
-          >
-            {contentData[selectedContent].content}
-          </Text>
-        </View>
-      </View>
-    ) : (
-      <View
-        style={{
-          flex: 1,
-          justifyContent: 'center',
-          alignItems: 'center',
-          paddingVertical: 60
-        }}
-      >
-        <View
-          style={{
-            backgroundColor: '#ffffff',
-            borderRadius: 20,
-            padding: 40,
-            marginHorizontal: 8,
-            alignItems: 'center',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.12,
-            shadowRadius: 8,
-            elevation: 6,
-            maxWidth: 420,
-            width: '100%',
-            borderWidth: 1,
-            borderColor: '#f1f5f9'
-          }}
-        >
-          <View
-            style={{
-              backgroundColor: '#dcfce7',
-              padding: 20,
-              borderRadius: 50,
-              marginBottom: 24
-            }}
-          >
-            <Ionicons name="leaf-outline" size={48} color="#16a34a" />
-          </View>
-          <Text
-            style={{
-              fontSize: 24,
-              fontWeight: '700',
-              color: '#1f2937',
-              marginBottom: 16,
-              textAlign: 'center',
-              letterSpacing: 0.5
-            }}
-          >
-            Welcome to Green Step Education
-          </Text>
-          <Text
-            style={{
-              color: '#6b7280',
-              marginBottom: 32,
-              textAlign: 'center',
-              fontSize: 16,
-              lineHeight: 24,
-              paddingHorizontal: 8
-            }}
-          >
-            Select a topic from the menu to start learning about reforestation and environmental conservation.
-          </Text>
-          <TouchableOpacity
-            onPress={() => {
-              toggleSection('basics');
-              setSidebarOpen(true);
-            }}
-            style={{
-              backgroundColor: '#16a34a',
-              paddingHorizontal: 32,
-              paddingVertical: 16,
-              borderRadius: 12,
-              shadowColor: '#16a34a',
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 8,
-              elevation: 6
-            }}
-          >
-            <Text
-              style={{
-                color: '#ffffff',
-                fontWeight: '600',
-                fontSize: 16,
-                letterSpacing: 0.5
-              }}
-            >
-              Start with the Basics
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    )}
-  </ScrollView>
-</View>
-
-
-      {/* Chatbot */}
-{chatbotOpen && (
-  <Animated.View
-    style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: '#373435',
-      zIndex: 50,
-      transform: [{ scale: chatScaleAnim }],
-    }}
-  >
-    {/* Chat Header */}
-    <View
-      style={{
-        backgroundColor: '#000000',
-        paddingHorizontal: 20,
-        paddingVertical: 18,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: '#373435'
-      }}
-    >
-      <View>
-        <Text style={{ color: '#ffffff', fontSize: 20, fontWeight: '700', letterSpacing: 0.5 }}>Max</Text>
-        <Text style={{ color: '#9ca3af', fontSize: 12, marginTop: 2 }}>AI Assistant</Text>
-      </View>
-      <TouchableOpacity
-        onPress={() => setChatbotOpen(false)}
-        style={{
-          backgroundColor: '#373435',
-          paddingHorizontal: 16,
-          paddingVertical: 8,
-          borderRadius: 8
-        }}
-      >
-        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '500' }}>Close</Text>
-      </TouchableOpacity>
-    </View>
-
-    {/* Messages */}
-    <ScrollView
-      style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 16 }}
-      contentContainerStyle={{ paddingBottom: 16 }}
-      showsVerticalScrollIndicator={false}
-    >
-      {chatMessages
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .map((msg, index) => (
-          <View
-            key={index}
-            style={{
-              flexDirection: 'row',
-              justifyContent: msg.type === 'user' ? 'flex-end' : 'flex-start',
-              marginBottom: 16
-            }}
-          >
-            <View
-              style={{
-                maxWidth: '85%',
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                borderRadius: 12,
-                backgroundColor: msg.type === 'user' ? '#808080' : '#ffffff',
-                borderWidth: 1,
-                borderColor: msg.type === 'user' ? '#1D1D1D' : '#6b7280',
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.15,
-                shadowRadius: 4,
-                elevation: 3
-              }}
-            >
-              <Text style={{
-                fontSize: 15,
-                color: '#000000',
-                lineHeight: 22,
-                letterSpacing: 0.2
-              }}>
-                {parseMessageToJSX(msg.message)}
-              </Text>
-            </View>
-          </View>
-        ))}
-
-      {typing && <TypingIndicator />}
-    </ScrollView>
-
-    {/* Input Area */}
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{
-        padding: 16,
-        borderTopWidth: 1,
-        borderTopColor: '#373435',
-        backgroundColor: '#000000'
-      }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
-        <TextInput
-          value={chatInput}
-          onChangeText={setChatInput}
-          onSubmitEditing={sendMessage}
-          placeholder="Ask Max..."
-          placeholderTextColor="#9ca3af"
-          multiline
-          style={{
-            flex: 1,
-            backgroundColor: '#ffffff',
-            borderRadius: 12,
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            fontSize: 16,
-            color: '#000000',
-            maxHeight: 120,
-            minHeight: 48,
-            borderWidth: 1,
-            borderColor: '#e5e7eb'
-          }}
-        />
-        <TouchableOpacity
-          onPress={sendMessage}
-          style={{
-            backgroundColor: '#373435',
-            marginLeft: 12,
-            paddingHorizontal: 16,
-            paddingVertical: 14,
-            borderRadius: 12,
-            borderWidth: 0.5,
-            borderColor: '#727376',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.3,
-            shadowRadius: 6,
-            elevation: 6,
-            justifyContent: 'center',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 4,
+            elevation: 3,
+            borderBottomWidth: 1,
+            borderBottomColor: '#e5e7eb',
+            flexDirection: 'row',
             alignItems: 'center'
           }}
         >
-          <Ionicons name="send" size={20} color="#ffffff" />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
-  </Animated.View>
-)}
+          <TouchableOpacity
+            onPress={toggleSidebar}
+            style={{
+              padding: 12,
+              marginRight: 16,
+              borderRadius: 8,
+              backgroundColor: '#f9fafb'
+            }}
+          >
+            <Ionicons name="menu" size={24} color="#374151" />
+          </TouchableOpacity>
+          <Text
+            style={{
+              fontSize: 22,
+              fontWeight: 'bold',
+              color: '#166534',
+              flex: 1,
+              letterSpacing: 0.5
+            }}
+          >
+            Green Step Education
+          </Text>
+        </View>
 
+        {/* Scrollable Content */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {contentData[selectedContent] ? (
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontSize: 28,
+                  fontWeight: 'bold',
+                  color: '#1f2937',
+                  marginBottom: 24,
+                  lineHeight: 36,
+                  paddingHorizontal: 4
+                }}
+              >
+                {contentData[selectedContent].title}
+              </Text>
+              <View
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: 16,
+                  padding: 24,
+                  marginHorizontal: 4,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 3 },
+                  shadowOpacity: 0.12,
+                  shadowRadius: 6,
+                  elevation: 4,
+                  borderWidth: 1,
+                  borderColor: '#f1f5f9'
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: '#374151',
+                    lineHeight: 26,
+                    letterSpacing: 0.3
+                  }}
+                >
+                  {contentData[selectedContent].content}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View
+              style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingVertical: 60
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: '#ffffff',
+                  borderRadius: 20,
+                  padding: 40,
+                  marginHorizontal: 8,
+                  alignItems: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.12,
+                  shadowRadius: 8,
+                  elevation: 6,
+                  maxWidth: 420,
+                  width: '100%',
+                  borderWidth: 1,
+                  borderColor: '#f1f5f9'
+                }}
+              >
+                <View
+                  style={{
+                    backgroundColor: '#dcfce7',
+                    padding: 20,
+                    borderRadius: 50,
+                    marginBottom: 24
+                  }}
+                >
+                  <Ionicons name="leaf-outline" size={48} color="#16a34a" />
+                </View>
+                <Text
+                  style={{
+                    fontSize: 24,
+                    fontWeight: '700',
+                    color: '#1f2937',
+                    marginBottom: 16,
+                    textAlign: 'center',
+                    letterSpacing: 0.5
+                  }}
+                >
+                  Welcome to Green Step Education
+                </Text>
+                <Text
+                  style={{
+                    color: '#6b7280',
+                    marginBottom: 32,
+                    textAlign: 'center',
+                    fontSize: 16,
+                    lineHeight: 24,
+                    paddingHorizontal: 8
+                  }}
+                >
+                  Select a topic from the menu to start learning about reforestation and environmental conservation.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    toggleSection('basics');
+                    setSidebarOpen(true);
+                  }}
+                  style={{
+                    backgroundColor: '#16a34a',
+                    paddingHorizontal: 32,
+                    paddingVertical: 16,
+                    borderRadius: 12,
+                    shadowColor: '#16a34a',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 8,
+                    elevation: 6
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: '#ffffff',
+                      fontWeight: '600',
+                      fontSize: 16,
+                      letterSpacing: 0.5
+                    }}
+                  >
+                    Start with the Basics
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </View>
+
+      {/* Chatbot Button - Always rendered */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          bottom: 15,
+          right: 15,
+          transform: [{ translateY: chatButtonTranslateY }],
+          zIndex: 999
+        }}
+      >
+        <TouchableOpacity
+          onPress={() => setChatbotOpen(!chatbotOpen)}
+          style={{
+            backgroundColor: '#373435',
+            borderRadius: 50,
+            paddingHorizontal: 25,
+            paddingVertical: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+            borderWidth: 0.5,
+            borderColor: '#727376'
+          }}
+        >
+          <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '600' }}>Max</Text>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* Chatbot Window - Always rendered but scaled */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: '#373435',
+          zIndex: 1000,
+          transform: [{ scale: chatScaleAnim }],
+          opacity: chatScaleAnim,
+        }}
+        pointerEvents={chatbotOpen ? 'auto' : 'none'}
+      >
+        {/* Chat Header */}
+        <View
+          style={{
+            backgroundColor: '#000000',
+            paddingHorizontal: 20,
+            paddingVertical: 18,
+            paddingTop: Platform.OS === 'ios' ? 50 : 18,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderBottomWidth: 1,
+            borderBottomColor: '#373435'
+          }}
+        >
+          <View>
+            <Text style={{ color: '#ffffff', fontSize: 20, fontWeight: '700', letterSpacing: 0.5 }}>Max</Text>
+            <Text style={{ color: '#9ca3af', fontSize: 12, marginTop: 2 }}>AI Assistant</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setChatbotOpen(false)}
+            style={{
+              backgroundColor: '#373435',
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 8
+            }}
+          >
+            <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '500' }}>Close</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Messages */}
+        {chatMessages.length > 0 ? (
+          <ScrollView
+            ref={chatScrollRef}
+            style={{ flex: 1, paddingHorizontal: 16, paddingVertical: 16, backgroundColor: '#101010' }}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={{ alignItems: 'center', marginVertical: 10 }}>
+              <View style={{ backgroundColor: '#8f8f8f', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 5, borderWidth: 1, borderColor: '#6b7280' }}>
+                <Text style={{ color: '#1f2937', fontSize: 11 }}>Today</Text>
+              </View>
+            </View>
+            {chatMessages
+              .sort((a, b) => a.timestamp - b.timestamp)
+              .map((msg, index) => (
+                <View
+                  key={index}
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: msg.type === 'user' ? 'flex-end' : 'flex-start',
+                    marginBottom: 16
+                  }}
+                >
+                  <View
+                    style={{
+                      maxWidth: '85%',
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                      borderRadius: 12,
+                      backgroundColor: msg.type === 'user' ? '#808080' : '#ffffff',
+                      borderWidth: 1,
+                      borderColor: msg.type === 'user' ? '#1D1D1D' : '#6b7280',
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.15,
+                      shadowRadius: 4,
+                      elevation: 3
+                    }}
+                  >
+                    <Text style={{
+                      fontSize: 15,
+                      color: '#000000',
+                      lineHeight: 22,
+                      letterSpacing: 0.2
+                    }}>
+                      {parseMessageToJSX(msg.message)}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+
+            {typing && <TypingIndicator />}
+          </ScrollView>
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#101010', paddingHorizontal: 20 }}>
+            <View style={{ marginHorizontal: 20, paddingHorizontal: 10, marginVertical: 20 }}>
+              <Text style={{ color: '#d1d5db', fontSize: 16, marginBottom: 12, textAlign: 'center', lineHeight: 24 }}>
+                Hello! I'm Max, an AI-powered assistant for Green Step Education.
+              </Text>
+              <Text style={{ color: '#d1d5db', fontSize: 16, textAlign: 'center', lineHeight: 24 }}>
+                I'm here to guide you through reforestation topics and answer any questions you have about environmental conservation. Let's explore together!
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Input Area */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{
+            padding: 16,
+            paddingBottom: Platform.OS === 'ios' ? 30 : 16,
+            borderTopWidth: 1,
+            borderTopColor: '#373435',
+            backgroundColor: '#000000'
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+            <TextInput
+              value={chatInput}
+              onChangeText={setChatInput}
+              onSubmitEditing={sendMessage}
+              placeholder="Ask Max..."
+              placeholderTextColor="#9ca3af"
+              multiline
+              style={{
+                flex: 1,
+                backgroundColor: '#ffffff',
+                borderRadius: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontSize: 16,
+                color: '#000000',
+                maxHeight: 120,
+                minHeight: 48,
+                borderWidth: 1,
+                borderColor: '#e5e7eb'
+              }}
+            />
+            <TouchableOpacity
+              onPress={sendMessage}
+              style={{
+                backgroundColor: '#373435',
+                marginLeft: 12,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                borderRadius: 12,
+                borderWidth: 0.5,
+                borderColor: '#727376',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.3,
+                shadowRadius: 6,
+                elevation: 6,
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}
+            >
+              <Ionicons name="send" size={20} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Animated.View>
     </View>
   );
 };
