@@ -1,58 +1,53 @@
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Button, TextInput, View } from "react-native";
-import { BASE_URL } from "../../constants/config";
+import { View, TextInput, Button, StyleSheet, Alert } from "react-native";
+import { createPost } from "../../src/api/posts";
+import { useAuth } from "../../contexts/AuthContext";
+import { useRouter } from "expo-router";
 
-const CreatePost = () => {
+export default function CreatePost() {
   const [text, setText] = useState("");
+  const { user } = useAuth(); // should give username or user info
   const router = useRouter();
 
   const handlePost = async () => {
     if (!text.trim()) {
-      Alert.alert("Please write something!");
+      Alert.alert("Please enter something to post");
       return;
     }
 
     try {
-      const res = await fetch(`${BASE_URL}/api/posts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user: "You", // later replace with logged-in user
-          text,
-        }),
-      });
-
-      if (res.ok) {
-        console.log("Post created successfully");
-        router.back();
-      } else {
-        Alert.alert("Error creating post");
-      }
+      await createPost(user?.username || "Anonymous", text.trim());
+      setText("");
+      router.back(); // 👈 go back to community.tsx (feed)
     } catch (error) {
-      console.error("Error posting:", error);
+      console.error(error);
+      Alert.alert("Failed to create post. Please try again.");
     }
   };
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
+    <View style={styles.container}>
       <TextInput
+        style={styles.input}
+        multiline
         placeholder="What's on your mind?"
         value={text}
         onChangeText={setText}
-        multiline
-        style={{
-          borderColor: "#ccc",
-          borderWidth: 1,
-          borderRadius: 10,
-          padding: 10,
-          height: 150,
-          marginBottom: 20,
-        }}
       />
-      <Button title="Post" onPress={handlePost} />
+      <Button title="Post" onPress={handlePost} color="#16a34a" />
     </View>
   );
-};
+}
 
-export default CreatePost;
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16, backgroundColor: "#fff" },
+  input: {
+    borderColor: "#ccc",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    height: 120,
+    marginBottom: 12,
+    textAlignVertical: "top",
+  },
+});
