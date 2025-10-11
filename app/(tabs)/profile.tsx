@@ -6,20 +6,31 @@ import {
   TouchableOpacity, 
   ScrollView,
   SafeAreaView,
-  Alert, 
+  Alert,
   StatusBar,
   Modal,
   TextInput,
   Switch
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useAuth } from '../../contexts/AuthContext';
-import { onboardingUtils } from '../../utils/onboarding';
 
-export default function ProfileScreen() {
-  const router = useRouter();
-  const { user, logout } = useAuth();
+interface User {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  treesPlanted: number;
+  daysActive: number;
+  co2Saved: number;
+}
+
+interface ProfileScreenProps {
+  user: User;
+  onUpdateUser: (userData: Partial<User>) => void;
+  onLogout: () => void;
+}
+
+export default function ProfileScreen({ user, onUpdateUser, onLogout }: ProfileScreenProps) {
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
@@ -33,7 +44,15 @@ export default function ProfileScreen() {
   });
   
   // Notifications settings state
-  const [notifications, setNotifications] = useState({
+  interface NotificationSettings {
+    pushEnabled: boolean;
+    emailEnabled: boolean;
+    treeReminders: boolean;
+    challengeUpdates: boolean;
+    communityAlerts: boolean;
+  }
+
+  const [notifications, setNotifications] = useState<NotificationSettings>({
     pushEnabled: true,
     emailEnabled: true,
     treeReminders: true,
@@ -42,56 +61,33 @@ export default function ProfileScreen() {
   });
   
   // Privacy settings state
-  const [privacy, setPrivacy] = useState({
+  interface PrivacySettings {
+    profileVisible: boolean;
+    showEmail: boolean;
+    showPhoneNumber: boolean;
+    dataSharing: boolean;
+  }
+
+  const [privacy, setPrivacy] = useState<PrivacySettings>({
     profileVisible: true,
     showEmail: false,
     showPhoneNumber: false,
     dataSharing: true
   });
 
-  const handleResetOnboarding = async () => {
-    Alert.alert(
-      'Reset Onboarding',
-      'This will show the onboarding screens again on next app launch. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          style: 'destructive',
-          onPress: async () => {
-            await onboardingUtils.resetOnboarding();
-            router.replace('/onboarding');
-          },
-        },
-      ]
-    );
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-          },
-        },
-      ]
-    );
-  };
-
   const handleSaveAccount = () => {
-    // Validation
     if (!accountForm.firstName || !accountForm.lastName || !accountForm.email) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
     
-    // In a real app, this would call an API to update the user profile
+    onUpdateUser({
+      firstName: accountForm.firstName,
+      lastName: accountForm.lastName,
+      email: accountForm.email,
+      phoneNumber: accountForm.phoneNumber
+    });
+    
     Alert.alert('Success', 'Account settings updated successfully!');
     setShowAccountModal(false);
   };
@@ -106,29 +102,52 @@ export default function ProfileScreen() {
     setShowPrivacyModal(false);
   };
 
-  const menuItems = [
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: onLogout,
+        },
+      ]
+    );
+  };
+
+  interface MenuItem {
+    id: string;
+    title: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    onPress: () => void;
+    color?: string;
+  }
+
+  const menuItems: MenuItem[] = [
     {
       id: 'account',
       title: 'Account Settings',
-      icon: 'person-circle-outline' as const,
+      icon: 'person-circle-outline',
       onPress: () => setShowAccountModal(true),
     },
     {
       id: 'notifications',
       title: 'Notifications',
-      icon: 'notifications-outline' as const,
+      icon: 'notifications-outline',
       onPress: () => setShowNotificationsModal(true),
     },
     {
       id: 'privacy',
       title: 'Privacy & Security',
-      icon: 'shield-checkmark-outline' as const,
+      icon: 'shield-checkmark-outline',
       onPress: () => setShowPrivacyModal(true),
     },
     {
       id: 'help',
       title: 'Help & Support',
-      icon: 'help-circle-outline' as const,
+      icon: 'help-circle-outline',
       onPress: () => Alert.alert(
         'Help & Support',
         'For assistance:\n\n' +
@@ -139,21 +158,14 @@ export default function ProfileScreen() {
       ),
     },
     {
-      id: 'onboarding',
-      title: 'View Onboarding',
-      icon: 'book-outline' as const,
-      onPress: handleResetOnboarding,
-      color: '#0ea5e9',
-    },
-    {
       id: 'about',
       title: 'About GreenStep',
-      icon: 'information-circle-outline' as const,
+      icon: 'information-circle-outline',
       onPress: () => Alert.alert(
         'About GreenStep',
         'Version 1.0.0\n\n' +
         '🌱 Plant trees, track growth, save the planet!\n\n' +
-        'GreenStep helps you monitor and care for your trees while making a positive environmental impact.\n\n' +
+        'GreenStep helps you monitor and care for your trees while making a positive environmental impact through parcel reforestation and comprehensive tree tracking.\n\n' +
         '© 2025 GreenStep. All rights reserved.'
       ),
     },
@@ -178,23 +190,32 @@ export default function ProfileScreen() {
           <Text style={styles.userName}>
             {user?.firstName && user?.lastName 
               ? `${user.firstName} ${user.lastName}` 
-              : user?.username || 'User'}
+              : 'User'}
           </Text>
-          <Text style={styles.userEmail}>{user?.email || 'user@greenstep.app'}</Text>
+          <Text style={styles.userEmail}>{user?.email || 'No email provided'}</Text>
           
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>15</Text>
-              <Text style={styles.statLabel}>Trees</Text>
+              <View style={styles.statIconRow}>
+                <Ionicons name="leaf-outline" size={20} color="#16a34a" />
+                <Text style={styles.statValue}>{user?.treesPlanted || 0}</Text>
+              </View>
+              <Text style={styles.statLabel}>Trees Planted</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>127</Text>
+              <View style={styles.statIconRow}>
+                <Ionicons name="calendar-outline" size={20} color="#16a34a" />
+                <Text style={styles.statValue}>{user?.daysActive || 0}</Text>
+              </View>
               <Text style={styles.statLabel}>Days Active</Text>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>42kg</Text>
+              <View style={styles.statIconRow}>
+                <Ionicons name="leaf" size={20} color="#16a34a" />
+                <Text style={styles.statValue}>{user?.co2Saved || 0}kg</Text>
+              </View>
               <Text style={styles.statLabel}>CO₂ Saved</Text>
             </View>
           </View>
@@ -202,10 +223,13 @@ export default function ProfileScreen() {
 
         {/* Menu Items */}
         <View style={styles.menuContainer}>
-          {menuItems.map((item) => (
+          {menuItems.map((item, index) => (
             <TouchableOpacity
               key={item.id}
-              style={styles.menuItem}
+              style={[
+                styles.menuItem,
+                index === menuItems.length - 1 && styles.menuItemLast
+              ]}
               onPress={item.onPress}
             >
               <View style={styles.menuItemLeft}>
@@ -276,6 +300,7 @@ export default function ProfileScreen() {
                 onChangeText={(value) => setAccountForm({...accountForm, email: value})}
                 placeholder="Enter email"
                 keyboardType="email-address"
+                autoCapitalize="none"
               />
             </View>
             <View style={styles.inputGroup}>
@@ -289,6 +314,7 @@ export default function ProfileScreen() {
               />
             </View>
             <TouchableOpacity style={styles.saveButton} onPress={handleSaveAccount}>
+              <Ionicons name="checkmark-circle-outline" size={20} color="#ffffff" />
               <Text style={styles.saveButtonText}>Save Changes</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -309,67 +335,28 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalContent}>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Push Notifications</Text>
-                <Text style={styles.settingDescription}>Receive push notifications on your device</Text>
+            {[
+              { key: 'pushEnabled' as keyof NotificationSettings, title: 'Push Notifications', desc: 'Receive push notifications on your device' },
+              { key: 'emailEnabled' as keyof NotificationSettings, title: 'Email Notifications', desc: 'Receive updates via email' },
+              { key: 'treeReminders' as keyof NotificationSettings, title: 'Tree Care Reminders', desc: 'Get reminded about watering and care' },
+              { key: 'challengeUpdates' as keyof NotificationSettings, title: 'Challenge Updates', desc: 'Notifications about your challenges' },
+              { key: 'communityAlerts' as keyof NotificationSettings, title: 'Community Alerts', desc: 'Updates from the GreenStep community' }
+            ].map((item) => (
+              <View key={item.key} style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>{item.title}</Text>
+                  <Text style={styles.settingDescription}>{item.desc}</Text>
+                </View>
+                <Switch
+                  value={notifications[item.key]}
+                  onValueChange={(value) => setNotifications({...notifications, [item.key]: value})}
+                  trackColor={{ false: '#d1d5db', true: '#86efac' }}
+                  thumbColor={notifications[item.key] ? '#16a34a' : '#f4f4f5'}
+                />
               </View>
-              <Switch
-                value={notifications.pushEnabled}
-                onValueChange={(value) => setNotifications({...notifications, pushEnabled: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={notifications.pushEnabled ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Email Notifications</Text>
-                <Text style={styles.settingDescription}>Receive updates via email</Text>
-              </View>
-              <Switch
-                value={notifications.emailEnabled}
-                onValueChange={(value) => setNotifications({...notifications, emailEnabled: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={notifications.emailEnabled ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Tree Care Reminders</Text>
-                <Text style={styles.settingDescription}>Get reminded about watering and care</Text>
-              </View>
-              <Switch
-                value={notifications.treeReminders}
-                onValueChange={(value) => setNotifications({...notifications, treeReminders: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={notifications.treeReminders ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Challenge Updates</Text>
-                <Text style={styles.settingDescription}>Notifications about your challenges</Text>
-              </View>
-              <Switch
-                value={notifications.challengeUpdates}
-                onValueChange={(value) => setNotifications({...notifications, challengeUpdates: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={notifications.challengeUpdates ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Community Alerts</Text>
-                <Text style={styles.settingDescription}>Updates from the GreenStep community</Text>
-              </View>
-              <Switch
-                value={notifications.communityAlerts}
-                onValueChange={(value) => setNotifications({...notifications, communityAlerts: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={notifications.communityAlerts ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
+            ))}
             <TouchableOpacity style={styles.saveButton} onPress={handleSaveNotifications}>
+              <Ionicons name="checkmark-circle-outline" size={20} color="#ffffff" />
               <Text style={styles.saveButtonText}>Save Preferences</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -390,54 +377,25 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView style={styles.modalContent}>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Public Profile</Text>
-                <Text style={styles.settingDescription}>Make your profile visible to others</Text>
+            {[
+              { key: 'profileVisible' as keyof PrivacySettings, title: 'Public Profile', desc: 'Make your profile visible to others' },
+              { key: 'showEmail' as keyof PrivacySettings, title: 'Show Email', desc: 'Display email on your profile' },
+              { key: 'showPhoneNumber' as keyof PrivacySettings, title: 'Show Phone Number', desc: 'Display phone on your profile' },
+              { key: 'dataSharing' as keyof PrivacySettings, title: 'Data Sharing', desc: 'Share anonymous usage data to improve app' }
+            ].map((item) => (
+              <View key={item.key} style={styles.settingItem}>
+                <View style={styles.settingInfo}>
+                  <Text style={styles.settingTitle}>{item.title}</Text>
+                  <Text style={styles.settingDescription}>{item.desc}</Text>
+                </View>
+                <Switch
+                  value={privacy[item.key]}
+                  onValueChange={(value) => setPrivacy({...privacy, [item.key]: value})}
+                  trackColor={{ false: '#d1d5db', true: '#86efac' }}
+                  thumbColor={privacy[item.key] ? '#16a34a' : '#f4f4f5'}
+                />
               </View>
-              <Switch
-                value={privacy.profileVisible}
-                onValueChange={(value) => setPrivacy({...privacy, profileVisible: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={privacy.profileVisible ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Show Email</Text>
-                <Text style={styles.settingDescription}>Display email on your profile</Text>
-              </View>
-              <Switch
-                value={privacy.showEmail}
-                onValueChange={(value) => setPrivacy({...privacy, showEmail: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={privacy.showEmail ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Show Phone Number</Text>
-                <Text style={styles.settingDescription}>Display phone on your profile</Text>
-              </View>
-              <Switch
-                value={privacy.showPhoneNumber}
-                onValueChange={(value) => setPrivacy({...privacy, showPhoneNumber: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={privacy.showPhoneNumber ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
-            <View style={styles.settingItem}>
-              <View style={styles.settingInfo}>
-                <Text style={styles.settingTitle}>Data Sharing</Text>
-                <Text style={styles.settingDescription}>Share anonymous usage data to improve app</Text>
-              </View>
-              <Switch
-                value={privacy.dataSharing}
-                onValueChange={(value) => setPrivacy({...privacy, dataSharing: value})}
-                trackColor={{ false: '#d1d5db', true: '#86efac' }}
-                thumbColor={privacy.dataSharing ? '#16a34a' : '#f4f4f5'}
-              />
-            </View>
+            ))}
             <View style={styles.infoBox}>
               <Ionicons name="information-circle" size={20} color="#0ea5e9" />
               <Text style={styles.infoText}>
@@ -445,6 +403,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <TouchableOpacity style={styles.saveButton} onPress={handleSavePrivacy}>
+              <Ionicons name="checkmark-circle-outline" size={20} color="#ffffff" />
               <Text style={styles.saveButtonText}>Save Settings</Text>
             </TouchableOpacity>
           </ScrollView>
@@ -521,15 +480,21 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
   },
+  statIconRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   statValue: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#16a34a',
-    marginBottom: 4,
+    marginLeft: 4,
   },
   statLabel: {
     fontSize: 12,
     color: '#6b7280',
+    textAlign: 'center',
   },
   statDivider: {
     width: 1,
@@ -554,6 +519,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
+  },
+  menuItemLast: {
+    borderBottomWidth: 0,
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -646,10 +614,12 @@ const styles = StyleSheet.create({
     color: '#1f2937',
   },
   saveButton: {
+    flexDirection: 'row',
     backgroundColor: '#16a34a',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -661,6 +631,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
   settingItem: {
     flexDirection: 'row',
