@@ -10,7 +10,6 @@ export async function startMocks() {
   // Native: swap Axios adapter to in-memory adapter
   const { axiosInMemoryAdapter } = await import('./nativeAdapter');
   if (api && api.defaults) {
-    // @ts-expect-error types for adapter assignment
     api.defaults.adapter = axiosInMemoryAdapter;
   }
 }
@@ -18,7 +17,6 @@ export async function startMocks() {
 export function stopMocks() {
   // Reset to default adapter for real API calls
   if (api && api.defaults) {
-    // @ts-expect-error types for adapter assignment
     api.defaults.adapter = undefined;
   }
 }
