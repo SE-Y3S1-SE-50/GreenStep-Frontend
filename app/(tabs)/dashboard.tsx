@@ -1090,11 +1090,20 @@ const Dashboard: React.FC = () => {
           careRecords.slice(0, 5).map((record, index) => {
             console.log('🔍 Rendering care record:', record);
             console.log('🔍 Record ID:', record.id, 'Record _id:', record._id);
+            
+            // Find the tree name for this care record
+            const tree = trees.find(t => t.id === record.treeId || t._id === record.treeId);
+            const treeName = tree ? tree.name : 'Unknown Tree';
+            
             return (
             <View key={record.id || record._id || `care-record-${index}`} style={styles.careRecord}>
               <View style={styles.careHeader}>
                 <Text style={styles.careAction}>{record.action.replace('_', ' ').toUpperCase()}</Text>
                 <Text style={styles.careDate}>{new Date(record.date).toLocaleDateString()}</Text>
+              </View>
+              <View style={styles.careTreeInfo}>
+                <Ionicons name="leaf" size={14} color="#16a34a" />
+                <Text style={styles.careTreeName}>{treeName}</Text>
               </View>
               <Text style={styles.careNotes}>{record.notes}</Text>
               <View style={styles.careRating}>
@@ -1919,6 +1928,17 @@ const createResponsiveStyles = () => StyleSheet.create({
   careDate: {
     fontSize: 12,
     color: '#6b7280',
+  },
+  careTreeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  careTreeName: {
+    fontSize: 13,
+    color: '#16a34a',
+    fontWeight: '500',
+    marginLeft: 4,
   },
   careNotes: {
     fontSize: 14,
