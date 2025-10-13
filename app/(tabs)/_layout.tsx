@@ -1,26 +1,57 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AuthWrapper from '../../components/AuthWrapper';
+import { useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
-export default function Layout() {
+export default function TabsLayout() {
+  const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace('/auth/login');
+    }
+  }, [isAuthenticated, loading]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#16a34a" />
+      </View>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
+
   return (
-    <AuthWrapper>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: '#007AFF',
-          tabBarInactiveTintColor: 'gray',
-        }}
-      >
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#16a34a',
+        tabBarInactiveTintColor: '#6b7280',
+        tabBarStyle: {
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#e5e7eb',
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60,
+        },
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="dashboard"
         options={{
-          title: 'Home',
+          title: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
+            <Ionicons name="analytics-outline" color={color} size={size} />
           ),
         }}
       />
+
       <Tabs.Screen
         name="education"
         options={{
@@ -30,7 +61,7 @@ export default function Layout() {
           ),
         }}
       />
-      
+
       <Tabs.Screen
         name="community"
         options={{
@@ -40,6 +71,7 @@ export default function Layout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="rewards"
         options={{
@@ -50,24 +82,35 @@ export default function Layout() {
         }}
       />
       <Tabs.Screen
-        name="dashboard"
+        name="challenges"
         options={{
-          title: 'Dashboard',
+          title: 'Challenges',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="analytics-outline" color={color} size={size} />
+            <Ionicons name="leaf-outline" color={color} size={size} />
           ),
         }}
       />
+
       <Tabs.Screen
         name="profile"
+        
         options={{
+          headerShown:false,  
           title: 'Profile',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-outline" color={color} size={size} />
           ),
         }}
       />
-      </Tabs>
-    </AuthWrapper>
+    </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+});

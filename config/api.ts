@@ -1,56 +1,43 @@
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
 
-// Resolve a development base URL that works across simulators/emulators and physical devices
-const resolveDevBaseUrl = (): string => {
-  // 1) Prefer explicit env variable if provided (Expo reads EXPO_PUBLIC_* at runtime)
-  const envUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (envUrl && envUrl.trim().length > 0) return envUrl;
-
-  // 2) Try to derive LAN IP from Expo hostUri when running in dev over LAN
-  //    This works for Expo Go on physical devices.
-  const hostUri = (Constants as any)?.expoConfig?.hostUri || (Constants as any)?.manifest2?.extra?.expoClient?.hostUri || (Constants as any)?.manifest?.debuggerHost;
-  if (hostUri && typeof hostUri === 'string') {
-    const host = hostUri.split(':')[0];
-    if (host && /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
-      return `http://${host}:8000/api`;
+// Get the local IP address for React Native
+const getBaseUrl = () => {
+  if (__DEV__) {
+    // For Android Emulator, use 10.0.2.2
+    // For iOS Simulator, use localhost
+    // For physical devices, use your computer's IP address
+    if (Platform.OS === 'android') {
+      return 'https://green-step-backend.vercel.app'; // Android Emulator
+      // return 'http://192.168.1.X:8000'; // Replace X with your computer's IP for physical device
     }
+    return 'http://localhost:8000'; // iOS Simulator
   }
-
-  // 3) Android emulator maps host machine to 10.0.2.2, use only when not a real device
-  if (Platform.OS === 'android' && (Constants as any)?.isDevice === false) {
-    return 'http://10.0.2.2:8000/api';
-  }
-
-  // 4) Fallback to localhost (works on iOS simulator & web)
-  return 'http://localhost:8000/api';
+  return 'http://localhost:8000'; // Production
 };
 
 // API Configuration
 export const API_CONFIG = {
-  BASE_URL: __DEV__ 
-    ? resolveDevBaseUrl()  // Development
-    : 'https://your-production-api.com/api', // Production
+  BASE_URL: getBaseUrl(),
   
   TIMEOUT: 10000, // 10 seconds
   
   ENDPOINTS: {
     AUTH: {
-      LOGIN: '/auth/login',
-      REGISTER: '/auth/register',
-      LOGOUT: '/logout',
-      CHECK_AUTH: '/check-cookie',
+      LOGIN: '/api/auth/login',
+      REGISTER: '/api/auth/register',
+      LOGOUT: '/api/logout',
+      CHECK_AUTH: '/api/check-cookie',
     },
     DASHBOARD: {
-      TREES: '/dashboard/trees',
-      CARE_RECORDS: '/dashboard/care-records',
-      GROWTH_MEASUREMENTS: '/dashboard/growth-measurements',
-      CARE_REMINDERS: '/dashboard/care-reminders',
-      STATS: '/dashboard/stats',
+      TREES: '/api/dashboard/trees',
+      CARE_RECORDS: '/api/dashboard/care-records',
+      GROWTH_MEASUREMENTS: '/api/dashboard/growth-measurements',
+      CARE_REMINDERS: '/api/dashboard/care-reminders',
+      STATS: '/api/dashboard/stats',
       ANALYTICS: {
-        REPORT: '/dashboard/analytics/report',
-        GROWTH_TREND: '/dashboard/analytics/growth-trend',
-        COMMUNITY: '/dashboard/analytics/community',
+        REPORT: '/api/dashboard/analytics/report',
+        GROWTH_TREND: '/api/dashboard/analytics/growth-trend',
+        COMMUNITY: '/api/dashboard/analytics/community',
       },
     },
   },

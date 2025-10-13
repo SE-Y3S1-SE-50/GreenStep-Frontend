@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
-import apiService from '../services/apiService';
-import { Tree, CareRecord, CareReminder, DashboardStats } from '../types/dashboard';
+import apiService from '../../services/apiService';
+import { Tree, CareRecord, CareReminder, DashboardStats } from '../../types/dashboard';
 
 interface DashboardContextType {
   // State
@@ -61,25 +61,25 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
   // Tree management methods
   const refreshTrees = async (): Promise<void> => {
-  try {
-    setIsLoading(true);
-    clearError();
-    
-    const response = await apiService.getTrees({ limit: 100 });
-    
-    if (response.success && response.data && response.data.trees) {
-      setTrees(response.data.trees);
-    } else {
-      setTrees([]); // Set empty array if no trees returned
+    try {
+      setIsLoading(true);
+      clearError();
+      
+      const response = await apiService.getTrees({ limit: 100 });
+      
+      if (response.success && response.data && response.data.trees) {
+        setTrees(response.data.trees);
+      } else {
+        setTrees([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch trees');
+      console.error('Error fetching trees:', err);
+      setTrees([]);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err) {
-    setError(err instanceof Error ? err.message : 'Failed to fetch trees');
-    console.error('Error fetching trees:', err);
-    setTrees([]); // Set empty array on error
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const addTree = async (treeData: Omit<Tree, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
     try {
@@ -132,26 +132,18 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
       setIsLoading(true);
       clearError();
       
-      console.log('DashboardContext: Deleting tree with ID:', id);
       const response = await apiService.deleteTree(id);
-      console.log('DashboardContext: Delete response:', response);
       
       if (response.success) {
-        setTrees(prevTrees => {
-          console.log('DashboardContext: Before deletion, trees count:', prevTrees.length);
-          const filtered = prevTrees.filter(tree => tree.id !== id);
-          console.log('DashboardContext: After deletion, trees count:', filtered.length);
-          return filtered;
-        });
+        setTrees(prevTrees => prevTrees.filter(tree => tree.id !== id));
         return true;
       } else {
-        console.log('DashboardContext: Delete failed:', response.error);
         setError(response.error || 'Failed to delete tree');
         return false;
       }
     } catch (err) {
-      console.error('DashboardContext: Delete error:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete tree');
+      console.error('Error deleting tree:', err);
       return false;
     } finally {
       setIsLoading(false);
@@ -160,54 +152,45 @@ export const DashboardProvider: React.FC<DashboardProviderProps> = ({ children }
 
   // Care records methods
   const refreshCareRecords = async (): Promise<void> => {
-  try {
-    setIsLoading(true);
-    clearError();
-    
-    console.log('🔍 Context: Fetching care records...');
-    
-    const response = await apiService.getCareRecords({ limit: 100 });
-    console.log('🔍 Context: Care records API response:', response);
-    
-    if (response.success && response.data && response.data.careRecords) {
-      console.log('🔍 Context: Setting care records:', response.data.careRecords.length, 'records');
-      setCareRecords(response.data.careRecords);
-    } else {
-      setCareRecords([]); // Set empty array if no records returned
+    try {
+      setIsLoading(true);
+      clearError();
+      
+      const response = await apiService.getCareRecords({ limit: 100 });
+      
+      if (response.success && response.data && response.data.careRecords) {
+        setCareRecords(response.data.careRecords);
+      } else {
+        setCareRecords([]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch care records');
+      console.error('Error fetching care records:', err);
+      setCareRecords([]);
+    } finally {
+      setIsLoading(false);
     }
-  } catch (err) {
-    console.error('🔍 Context: Error fetching care records:', err);
-    setError(err instanceof Error ? err.message : 'Failed to fetch care records');
-    setCareRecords([]); // Set empty array on error
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const addCareRecord = async (careData: Omit<CareRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
     try {
       setIsLoading(true);
       clearError();
       
-      console.log('🔍 Context: Adding care record with data:', careData);
-      
       const response = await apiService.addCareRecord(careData);
-      console.log('🔍 Context: API response:', response);
       
       if (response.success && response.data) {
-        const created = (response as any).data;
-        const normalized = { ...created, id: created._id || created.id } as CareRecord;
+        const normalized = { ...response.data, id: response.data._id || response.data.id } as CareRecord;
         setCareRecords(prev => [normalized, ...prev]);
         refreshStats();
         return true;
       } else {
-        console.log('🔍 Context: Failed to add care record - Full response:', response);
         setError(response.error || response.message || 'Failed to add care record');
         return false;
       }
     } catch (err) {
-      console.error('🔍 Context: Error adding care record:', err);
       setError(err instanceof Error ? err.message : 'Failed to add care record');
+      console.error('Error adding care record:', err);
       return false;
     } finally {
       setIsLoading(false);
