@@ -13,7 +13,9 @@ import {
   StatusBar,
   ActivityIndicator,
   useWindowDimensions,
+  Platform,
 } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { useDashboard } from '../../contexts/DashboardContext';
@@ -86,7 +88,14 @@ const Dashboard: React.FC = () => {
   const [showAddTreeModal, setShowAddTreeModal] = useState(false);
   const [showEditTreeModal, setShowEditTreeModal] = useState(false);
   const [showCareModal, setShowCareModal] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'trees' | 'analytics' | 'care'>('overview');
+  
+  // Tree sorting and filtering state
+  const [sortBy, setSortBy] = useState<'name' | 'species' | 'plantDate' | 'healthStatus' | 'height'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterBy, setFilterBy] = useState<'all' | 'excellent' | 'good' | 'fair' | 'poor'>('all');
+  const [showSortFilter, setShowSortFilter] = useState(false);
   
   // Form state for adding new tree
   const [newTreeForm, setNewTreeForm] = useState({
@@ -98,6 +107,7 @@ const Dashboard: React.FC = () => {
     diameter: '',
     notes: ''
   });
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   // Form validation state
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
@@ -215,11 +225,11 @@ const Dashboard: React.FC = () => {
 
   // Use real analytics data or fallback to calculated data
   const growthData = analyticsData?.growthTrend || {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     datasets: [
       {
         label: 'Height (m)',
-        data: [1.2, 1.5, 1.8, 2.1, 2.3, 2.5],
+        data: [1.2, 1.5, 1.8, 2.1, 2.3, 2.5, 2.7, 2.9, 3.1, 3.3, 3.5, 3.7],
         color: (opacity = 1) => `rgba(22, 163, 74, ${opacity})`,
         strokeWidth: 2,
       },
@@ -448,6 +458,78 @@ const Dashboard: React.FC = () => {
 
   const clearFormErrors = () => {
     setFormErrors({});
+  };
+
+  // Date picker handlers
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setSelectedDate(selectedDate);
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+      updateFormField('plantDate', formattedDate);
+    }
+  };
+
+  const showDatePickerModal = () => {
+    setShowDatePicker(true);
+  };
+
+  // Tree sorting and filtering functions
+  const getSortedAndFilteredTrees = () => {
+    let filteredTrees = trees;
+
+    // Filter by health status
+    if (filterBy !== 'all') {
+      filteredTrees = trees.filter(tree => tree.healthStatus === filterBy);
+    }
+
+    // Sort trees
+    return filteredTrees.sort((a, b) => {
+      let aValue, bValue;
+
+      switch (sortBy) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'species':
+          aValue = a.species.toLowerCase();
+          bValue = b.species.toLowerCase();
+          break;
+        case 'plantDate':
+          aValue = new Date(a.plantDate).getTime();
+          bValue = new Date(b.plantDate).getTime();
+          break;
+        case 'healthStatus':
+          const healthOrder = { excellent: 4, good: 3, fair: 2, poor: 1 };
+          aValue = healthOrder[a.healthStatus];
+          bValue = healthOrder[b.healthStatus];
+          break;
+        case 'height':
+          aValue = a.height;
+          bValue = b.height;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const handleSortChange = (newSortBy: typeof sortBy) => {
+    if (sortBy === newSortBy) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(newSortBy);
+      setSortOrder('asc');
+    }
+  };
+
+  const handleFilterChange = (newFilter: typeof filterBy) => {
+    setFilterBy(newFilter);
   };
 
   // Care record validation
@@ -800,57 +882,237 @@ const Dashboard: React.FC = () => {
 
       {/* Growth Chart */}
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Tree Growth Over Time</Text>
-        <LineChart
-          data={growthData}
-          width={windowWidth - (isTablet ? 64 : 48)}
-          height={isTablet ? 280 : 220}
-          chartConfig={chartConfig}
-          bezier
-          style={styles.chart}
-        />
+        <View style={styles.chartHeader}>
+          <Text style={styles.chartTitle}>Tree Growth Over Time</Text>
+          <View style={styles.chartStats}>
+            <View style={styles.chartStatItem}>
+              <Text style={styles.chartStatNumber}>
+                {trees.length > 0 ? Math.max(...trees.map(t => t.height)).toFixed(1) : '0.0'}
+              </Text>
+              <Text style={styles.chartStatLabel}>Max (m)</Text>
+            </View>
+            <View style={styles.chartStatItem}>
+              <Text style={styles.chartStatNumber}>
+                {trees.length > 0 ? Math.min(...trees.map(t => t.height)).toFixed(1) : '0.0'}
+              </Text>
+              <Text style={styles.chartStatLabel}>Min (m)</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.progressChartContainer}>
+          <ScrollView 
+            horizontal={true} 
+            showsHorizontalScrollIndicator={true}
+            contentContainerStyle={styles.scrollableChart}
+          >
+            <LineChart
+              data={growthData}
+              width={Math.max(windowWidth * 1.5, 600)}
+              height={isTablet ? 260 : 200}
+            chartConfig={{
+              ...chartConfig,
+              backgroundGradientFrom: '#f8fafc',
+              backgroundGradientTo: '#f8fafc',
+              color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
+              strokeWidth: 3,
+              fillShadowGradient: '#22c55e',
+              fillShadowGradientOpacity: 0.2,
+              propsForLabels: {
+                fontSize: 12,
+                fontWeight: '500',
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: '5,5',
+                stroke: '#e2e8f0',
+              },
+            }}
+            bezier
+            style={styles.enhancedChart}
+          />
+          </ScrollView>
+        </View>
       </View>
 
       {/* Carbon Absorption Chart */}
       <View style={styles.chartContainer}>
-        <Text style={styles.chartTitle}>Carbon Absorption by Species</Text>
-        <BarChart
-          data={carbonData}
-          width={windowWidth - (isTablet ? 64 : 48)}
-          height={isTablet ? 280 : 220}
-          chartConfig={chartConfig}
-          style={styles.chart}
-          yAxisLabel=""
-          yAxisSuffix="kg"
-        />
+        <View style={styles.chartHeader}>
+          <Text style={styles.chartTitle}>Carbon Absorption by Species</Text>
+          <View style={styles.chartStats}>
+            <View style={styles.chartStatItem}>
+              <Text style={styles.chartStatNumber}>{totalCarbonAbsorbed.toFixed(1)}</Text>
+              <Text style={styles.chartStatLabel}>Total (kg)</Text>
+            </View>
+            <View style={styles.chartStatItem}>
+              <Text style={styles.chartStatNumber}>
+                {trees.length > 0 ? (totalCarbonAbsorbed / trees.length).toFixed(1) : '0.0'}
+              </Text>
+              <Text style={styles.chartStatLabel}>Avg/Tree</Text>
+            </View>
+          </View>
+        </View>
+        <View style={styles.progressChartContainer}>
+          <ScrollView 
+            horizontal={true} 
+            showsHorizontalScrollIndicator={true}
+            contentContainerStyle={styles.scrollableChart}
+          >
+            <BarChart
+              data={carbonData}
+              width={Math.max(windowWidth * 1.2, 500)}
+              height={isTablet ? 260 : 200}
+            chartConfig={{
+              ...chartConfig,
+              backgroundGradientFrom: '#f8fafc',
+              backgroundGradientTo: '#f8fafc',
+              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+              strokeWidth: 3,
+              barPercentage: 0.7,
+              decimalPlaces: 1,
+              fillShadowGradient: '#3b82f6',
+              fillShadowGradientOpacity: 0.3,
+              propsForLabels: {
+                fontSize: 12,
+                fontWeight: '500',
+              },
+              propsForBackgroundLines: {
+                strokeDasharray: '5,5',
+                stroke: '#e2e8f0',
+              },
+            }}
+            style={styles.enhancedChart}
+            yAxisLabel=""
+            yAxisSuffix="kg"
+            showValuesOnTopOfBars={true}
+            fromZero={true}
+          />
+          </ScrollView>
+        </View>
       </View>
 
       {/* Health Distribution */}
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Tree Health Distribution</Text>
-        <PieChart
-          data={[
-            { name: 'Excellent', population: healthDistribution.data[0], color: '#16a34a', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-            { name: 'Good', population: healthDistribution.data[1], color: '#84cc16', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-            { name: 'Fair', population: healthDistribution.data[2], color: '#eab308', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-            { name: 'Poor', population: healthDistribution.data[3], color: '#ef4444', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-          ]}
-          width={windowWidth - (isTablet ? 64 : 48)}
-          height={isTablet ? 280 : 220}
-          chartConfig={chartConfig}
-          accessor="population"
-          backgroundColor="transparent"
-          paddingLeft="15"
-          style={styles.chart}
-        />
+        <View style={styles.progressChartContainer}>
+          <PieChart
+            data={[
+              { name: 'Excellent', population: healthDistribution.data[0], color: '#16a34a', legendFontColor: '#7F7F7F', legendFontSize: 12 },
+              { name: 'Good', population: healthDistribution.data[1], color: '#84cc16', legendFontColor: '#7F7F7F', legendFontSize: 12 },
+              { name: 'Fair', population: healthDistribution.data[2], color: '#eab308', legendFontColor: '#7F7F7F', legendFontSize: 12 },
+              { name: 'Poor', population: healthDistribution.data[3], color: '#ef4444', legendFontColor: '#7F7F7F', legendFontSize: 12 },
+            ]}
+            width={windowWidth - (isTablet ? 80 : 64)}
+            height={isTablet ? 260 : 200}
+            chartConfig={chartConfig}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="15"
+            style={styles.enhancedChart}
+          />
+        </View>
       </View>
     </ScrollView>
   );
 
-  const renderTreesTab = () => (
-    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
-      <View style={styles.treesContainer}>
-        {trees.map((tree, index) => (
+  const renderTreesTab = () => {
+    const sortedAndFilteredTrees = getSortedAndFilteredTrees();
+    
+    return (
+      <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+        {/* Sort and Filter Controls */}
+        <View style={styles.sortFilterContainer}>
+          <TouchableOpacity 
+            style={styles.sortFilterButton}
+            onPress={() => setShowSortFilter(!showSortFilter)}
+          >
+            <Ionicons name="funnel" size={16} color="#6b7280" />
+            <Text style={styles.sortFilterButtonText}>
+              Sort & Filter ({sortedAndFilteredTrees.length} trees)
+            </Text>
+            <Ionicons 
+              name={showSortFilter ? "chevron-up" : "chevron-down"} 
+              size={16} 
+              color="#6b7280" 
+            />
+          </TouchableOpacity>
+          
+          {showSortFilter && (
+            <View style={styles.sortFilterPanel}>
+              {/* Sort Options */}
+              <View style={styles.sortSection}>
+                <Text style={styles.sortFilterLabel}>Sort by:</Text>
+                <View style={styles.sortOptions}>
+                  {[
+                    { key: 'name', label: 'Name' },
+                    { key: 'species', label: 'Species' },
+                    { key: 'plantDate', label: 'Plant Date' },
+                    { key: 'healthStatus', label: 'Health' },
+                    { key: 'height', label: 'Height' }
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.key}
+                      style={[
+                        styles.sortOption,
+                        sortBy === option.key && styles.sortOptionActive
+                      ]}
+                      onPress={() => handleSortChange(option.key as typeof sortBy)}
+                    >
+                      <Text style={[
+                        styles.sortOptionText,
+                        sortBy === option.key && styles.sortOptionTextActive
+                      ]}>
+                        {option.label}
+                      </Text>
+                      {sortBy === option.key && (
+                        <Ionicons 
+                          name={sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'} 
+                          size={12} 
+                          color="#16a34a" 
+                        />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              {/* Filter Options */}
+              <View style={styles.filterSection}>
+                <Text style={styles.sortFilterLabel}>Filter by health:</Text>
+                <View style={styles.filterOptions}>
+                  {[
+                    { key: 'all', label: 'All Trees', color: '#6b7280' },
+                    { key: 'excellent', label: 'Excellent', color: '#16a34a' },
+                    { key: 'good', label: 'Good', color: '#84cc16' },
+                    { key: 'fair', label: 'Fair', color: '#eab308' },
+                    { key: 'poor', label: 'Poor', color: '#ef4444' }
+                  ].map((option) => (
+                    <TouchableOpacity
+                      key={option.key}
+                      style={[
+                        styles.filterOption,
+                        filterBy === option.key && styles.filterOptionActive
+                      ]}
+                      onPress={() => handleFilterChange(option.key as typeof filterBy)}
+                    >
+                      <View style={[
+                        styles.filterIndicator,
+                        { backgroundColor: option.color }
+                      ]} />
+                      <Text style={[
+                        styles.filterOptionText,
+                        filterBy === option.key && styles.filterOptionTextActive
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.treesContainer}>
+          {sortedAndFilteredTrees.map((tree, index) => (
           <TouchableOpacity
             key={tree.id || tree._id || `tree-${index}`}
             style={styles.treeCard}
@@ -927,7 +1189,8 @@ const Dashboard: React.FC = () => {
         </TouchableOpacity>
       </View>
     </ScrollView>
-  );
+    );
+  };
 
   const renderAnalyticsTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -957,21 +1220,77 @@ const Dashboard: React.FC = () => {
         </View>
 
         <View style={styles.analyticsCard}>
-          <Text style={styles.analyticsTitle}>Your Trees Progress</Text>
-          <BarChart
-            data={{
-              labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-              datasets: [{
-                data: analyticsData?.growthTrend?.datasets?.[0]?.data || [0, 0, 0, 0, 0, trees.length],
-              }],
-            }}
-            width={windowWidth - (isTablet ? 64 : 48)}
-            height={isTablet ? 260 : 200}
-            chartConfig={chartConfig}
-            style={styles.chart}
-            yAxisLabel=""
-            yAxisSuffix=""
-          />
+          <View style={styles.chartHeader}>
+            <Text style={styles.analyticsTitle}>Your Trees Progress</Text>
+            <View style={styles.chartStats}>
+            <View style={styles.chartStatItem}>
+              <Text style={styles.chartStatNumber}>{trees.length}</Text>
+              <Text style={styles.chartStatLabel}>Trees</Text>
+            </View>
+            <View style={styles.chartStatItem}>
+              <Text style={styles.chartStatNumber}>
+                {trees.length > 0 ? (trees.reduce((sum, tree) => sum + tree.height, 0) / trees.length).toFixed(1) : '0.0'}
+              </Text>
+              <Text style={styles.chartStatLabel}>Avg (m)</Text>
+            </View>
+            </View>
+          </View>
+          
+          {/* Enhanced Progress Chart */}
+          <View style={styles.progressChartContainer}>
+            <ScrollView 
+              horizontal={true} 
+              showsHorizontalScrollIndicator={true}
+              contentContainerStyle={styles.scrollableChart}
+            >
+              <BarChart
+                data={{
+                  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                  datasets: [{
+                    data: analyticsData?.growthTrend?.datasets?.[0]?.data || [0, 0, 0, 0, 0, trees.length, 0, 0, 0, 0, 0, 0],
+                  }],
+                }}
+                width={Math.max(windowWidth * 1.5, 600)}
+                height={isTablet ? 260 : 200}
+              chartConfig={{
+                ...chartConfig,
+                backgroundGradientFrom: '#f8fafc',
+                backgroundGradientTo: '#f8fafc',
+                color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
+                strokeWidth: 3,
+                barPercentage: 0.7,
+                decimalPlaces: 0,
+                fillShadowGradient: '#22c55e',
+                fillShadowGradientOpacity: 0.3,
+                propsForLabels: {
+                  fontSize: 12,
+                  fontWeight: '500',
+                },
+                propsForBackgroundLines: {
+                  strokeDasharray: '5,5',
+                  stroke: '#e2e8f0',
+                },
+              }}
+              style={styles.enhancedChart}
+              yAxisLabel=""
+              yAxisSuffix=""
+              showValuesOnTopOfBars={true}
+              fromZero={true}
+            />
+            </ScrollView>
+            
+            {/* Chart Legend */}
+            <View style={styles.chartLegend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendColor, { backgroundColor: '#22c55e' }]} />
+                <Text style={styles.legendText}>Trees Planted</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendColor, { backgroundColor: '#3b82f6' }]} />
+                <Text style={styles.legendText}>Growth Trend</Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         <View style={styles.analyticsCard}>
@@ -1284,15 +1603,21 @@ const Dashboard: React.FC = () => {
             
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Plant Date</Text>
-              <TextInput 
+              <TouchableOpacity 
                 style={[
-                  styles.textInput, 
+                  styles.dateInput, 
                   formErrors.plantDate ? styles.textInputError : null
-                ]} 
-                placeholder="YYYY-MM-DD (optional)" 
-                value={newTreeForm.plantDate}
-                onChangeText={(value) => updateFormField('plantDate', value)}
-              />
+                ]}
+                onPress={showDatePickerModal}
+              >
+                <Text style={[
+                  styles.dateInputText,
+                  !newTreeForm.plantDate && styles.dateInputPlaceholder
+                ]}>
+                  {newTreeForm.plantDate || 'Select plant date (optional)'}
+                </Text>
+                <Ionicons name="calendar-outline" size={20} color="#6b7280" />
+              </TouchableOpacity>
               {formErrors.plantDate ? (
                 <Text style={styles.errorText}>{formErrors.plantDate}</Text>
               ) : null}
@@ -1360,6 +1685,18 @@ const Dashboard: React.FC = () => {
               <Text style={styles.saveButtonText}>Save Tree</Text>
             </TouchableOpacity>
           </ScrollView>
+          
+          {/* Date Picker */}
+          {showDatePicker && (
+            <DateTimePicker
+              value={selectedDate}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={handleDateChange}
+              maximumDate={new Date()}
+              minimumDate={new Date('1900-01-01')}
+            />
+          )}
         </SafeAreaView>
       </Modal>
 
@@ -1751,8 +2088,111 @@ const createResponsiveStyles = () => StyleSheet.create({
   chart: {
     borderRadius: 8,
   },
+  sortFilterContainer: {
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  sortFilterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 8,
+  },
+  sortFilterButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginLeft: 8,
+    flex: 1,
+  },
+  sortFilterPanel: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    padding: 16,
+    marginBottom: 8,
+  },
+  sortSection: {
+    marginBottom: 16,
+  },
+  filterSection: {
+    marginBottom: 0,
+  },
+  sortFilterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  sortOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  sortOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  sortOptionActive: {
+    backgroundColor: '#dcfce7',
+    borderColor: '#16a34a',
+  },
+  sortOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  sortOptionTextActive: {
+    color: '#16a34a',
+  },
+  filterOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#f9fafb',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  filterOptionActive: {
+    backgroundColor: '#dcfce7',
+    borderColor: '#16a34a',
+  },
+  filterIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  filterOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  filterOptionTextActive: {
+    color: '#16a34a',
+  },
   treesContainer: {
-    paddingTop: 20,
+    paddingTop: 10,
   },
   treeCard: {
     backgroundColor: '#ffffff',
@@ -1877,10 +2317,83 @@ const createResponsiveStyles = () => StyleSheet.create({
     elevation: 3,
   },
   analyticsTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     color: '#1f2937',
+    marginBottom: 0,
+    flex: 1,
+    flexShrink: 1,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 16,
+    flexWrap: 'wrap',
+  },
+  chartStats: {
+    flexDirection: 'row',
+    gap: 8,
+    flexShrink: 1,
+  },
+  chartStatItem: {
+    alignItems: 'center',
+    minWidth: 60,
+    flexShrink: 1,
+  },
+  chartStatNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#16a34a',
+    marginBottom: 2,
+  },
+  chartStatLabel: {
+    fontSize: 10,
+    color: '#6b7280',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  progressChartContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    alignItems: 'center',
+  },
+  scrollableChart: {
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  enhancedChart: {
+    borderRadius: 8,
+    marginVertical: 4,
+    alignSelf: 'center',
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 20,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  legendColor: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 6,
+  },
+  legendText: {
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: '500',
   },
   impactMetrics: {
     flexDirection: 'row',
@@ -2034,6 +2547,24 @@ const createResponsiveStyles = () => StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#1f2937',
+  },
+  dateInput: {
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dateInputText: {
+    fontSize: 16,
+    color: '#1f2937',
+  },
+  dateInputPlaceholder: {
+    color: '#9ca3af',
   },
   textInputError: {
     borderColor: '#ef4444',
