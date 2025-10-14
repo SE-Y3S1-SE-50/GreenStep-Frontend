@@ -124,12 +124,7 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
 
-            {/* Demo Credentials */}
-            <View style={styles.demoInfo}>
-              <Text style={styles.demoInfoTitle}>Demo Credentials:</Text>
-              <Text style={styles.demoInfoText}>Username: johndoe</Text>
-              <Text style={styles.demoInfoText}>Password: password123</Text>
-            </View>
+           
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
