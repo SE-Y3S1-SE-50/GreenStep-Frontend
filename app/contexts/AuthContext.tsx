@@ -11,6 +11,10 @@ interface User {
   firstName: string;
   lastName: string;
   role?: string;
+  phoneNumber?: string;
+  treesPlanted?: number;
+  daysActive?: number;
+  co2Saved?: number;
 }
 
 interface AuthContextType {
@@ -124,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(data.message || 'Login failed');
       }
 
-      // Create user object from response
+      // Create user object from response with optional properties
       const userData: User = {
         id: data.userId || 'temp-id',
         username: data.username || username,
@@ -132,6 +136,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         firstName: data.firstName || '',
         lastName: data.lastName || '',
         role: data.role || 'user',
+        phoneNumber: data.phoneNumber,
+        treesPlanted: data.treesPlanted || 0,
+        daysActive: data.daysActive || 0,
+        co2Saved: data.co2Saved || 0,
       };
 
       // Store user data and token
