@@ -10,16 +10,16 @@ const getBaseUrl = () => {
       return 'https://green-step-backend.vercel.app'; // Android Emulator
       // return 'http://192.168.1.X:8000'; // Replace X with your computer's IP for physical device
     }
-    return 'http://localhost:8000'; // iOS Simulator
+    return 'https://green-step-backend.vercel.app'; // iOS Simulator
   }
-  return 'http://localhost:8000'; // Production
+  return 'https://green-step-backend.vercel.app'; // Production
 };
 
 // API Configuration
 export const API_CONFIG = {
   BASE_URL: getBaseUrl(),
   
-  TIMEOUT: 10000, // 10 seconds
+  TIMEOUT: 30000, // 10 seconds
   
   ENDPOINTS: {
     AUTH: {
